@@ -1,4 +1,4 @@
-import {app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, session, protocol} from "electron"
+import {app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, session, protocol, webContents} from "electron"
 import {autoUpdater} from "electron-updater"
 import windowStateKeeper from "electron-window-state"
 import debounce from "debounce"
@@ -20,7 +20,7 @@ let ffmpegPath = undefined as any
 if (process.platform === "darwin") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.app")
 if (process.platform === "win32") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg.exe")
 if (process.platform === "linux") ffmpegPath = path.join(app.getAppPath(), "../../ffmpeg/ffmpeg")
-if (!fs.existsSync(ffmpegPath)) ffmpegPath = process.platform === "darwin" ? "/opt/homebrew/Cellar/ffmpeg/5.1.2/bin/ffmpeg" : undefined
+if (!fs.existsSync(ffmpegPath)) ffmpegPath = process.platform === "darwin" ? "ffmpeg/ffmpeg.app" : undefined
 autoUpdater.autoDownload = false
 const store = new Store()
 
@@ -77,10 +77,15 @@ ipcMain.handle("get-object", () => {
 ipcMain.handle("delete-cookies", () => {
   session.defaultSession.clearStorageData()
   store.delete("cookie")
+  store.delete("token")
 })
 
 ipcMain.handle("get-cookie", () => {
   return store.get("cookie", "")
+})
+
+ipcMain.handle("get-token", () => {
+  return store.get("token", "")
 })
 
 ipcMain.handle("download-url", (event, url, html) => {
@@ -495,6 +500,33 @@ ipcMain.handle("download", async (event, info) => {
   }
 })
 
+ipcMain.handle("webview-id", async (event, id) => {
+  const contents = webContents.fromId(id)!
+  contents.debugger.attach("1.3")
+  
+  contents.debugger.on("detach", (event, reason) => { 
+    console.log("Debugger detached due to: ", reason)
+  })
+  
+  contents.debugger.on("message", (event, method, params) => {
+    if (method === "Network.requestWillBeSentExtraInfo") {
+      if (params.headers[":path"] === "/auth/v1/token") {
+        let cookie = params.headers.cookie
+        store.set("cookie", cookie)
+      }
+    }
+    if (method === "Network.responseReceived") {
+      if (params.response.url === "https://www.crunchyroll.com/auth/v1/token") {
+        contents.debugger.sendCommand("Network.getResponseBody", {requestId: params.requestId}).then((response) => {
+          const token = JSON.parse(response.body).access_token
+          store.set("token", token)
+        })
+      }
+    }
+  })
+  contents.debugger.sendCommand("Network.enable")
+})
+
 const singleLock = app.requestSingleInstanceLock()
 
 if (!singleLock) {
@@ -524,13 +556,20 @@ if (!singleLock) {
     window.on("closed", () => {
       window = null
     })
+    try {
+      window.webContents.debugger.attach("1.3")
+    } catch (error) {
+      console.log("Debugger attach failed: ", error)
+    }
     globalShortcut.register("Control+Shift+I", () => {
       window?.webContents.toggleDevTools()
       website?.webContents.toggleDevTools()
     })
     session.defaultSession.webRequest.onSendHeaders({urls: ["https://www.crunchyroll.com/", "https://www.crunchyroll.com/login"]}, (details) => {
-      const cookie = details.requestHeaders["Cookie"]
-      store.set("cookie", encodeURI(cookie))
+      let cookie = details.requestHeaders["Cookie"]
+      console.log(cookie)
+      cookie = cookie.match(/(__cf_bm)(.*)/)?.[0]!
+      store.set("cookie", cookie)
     })
     session.defaultSession.webRequest.onCompleted({urls: ["https://www.crunchyroll.com/cms/*"]}, (details) => {
       if (details.url.includes("objects/")) store.set("object", encodeURI(details.url))

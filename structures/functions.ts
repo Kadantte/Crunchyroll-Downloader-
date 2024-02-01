@@ -90,39 +90,47 @@ export default class functions {
         if (locale === "en-US") return "English"
         if (locale === "en-GB") return "English"
         if (locale === "es-ES") return "Spanish"
-        if (locale === "es-LA") return "Spanish"
+        if (locale === "es-419") return "Spanish"
         if (locale === "fr-FR") return "French"
         if (locale === "de-DE") return "German"
         if (locale === "it-IT") return "Italian"
         if (locale === "ru-RU") return "Russian"
         if (locale === "pt-BR") return "Portuguese"
         if (locale === "pt-PT") return "Portuguese"
-        if (locale === "ar-ME") return "Arabic"
+        if (locale === "ar-SA") return "Arabic"
+        if (locale === "hi-IN") return "Hindi"
         if (locale === "jaJP") return "ja-JP"
         if (locale === "enUS") return "en-US"
         if (locale === "enGB") return "en-GB"
         if (locale === "esES") return "es-ES"
-        if (locale === "esLA") return "es-LA"
+        if (locale === "esLA") return "es-419"
         if (locale === "frFR") return "fr-FR"
         if (locale === "deDE") return "de-DE"
         if (locale === "itIT") return "it-IT"
         if (locale === "ruRU") return "ru-RU"
         if (locale === "ptBR") return "pt-BR"
         if (locale === "ptPT") return "pt-PT"
-        if (locale === "arME") return "ar-ME"
+        if (locale === "arME") return "ar-SA"
+        if (locale === "hiIN") return "hi-IN"
         if (locale === "JP") return "ja-JP"
         if (locale === "US") return "en-US"
         if (locale === "GB") return "en-GB"
         if (locale === "ES") return "es-ES"
-        if (locale === "LA") return "es-LA"
+        if (locale === "LA") return "es-419"
         if (locale === "FR") return "fr-FR"
         if (locale === "DE") return "de-DE"
         if (locale === "IT") return "it-IT"
         if (locale === "RU") return "ru-RU"
         if (locale === "BR") return "pt-BR"
         if (locale === "PT") return "pt-PT"
-        if (locale === "ME") return "ar-ME"
+        if (locale === "ME") return "ar-SA"
+        if (locale === "HI") return "hi-IN"
         if (locale === "all") return "all"
+        // id-ID
+        // ms-MY
+        // th-TH
+        // vi-VN
+        // ta-IN
         return "None"
     }
 
@@ -151,7 +159,7 @@ export default class functions {
 
     public static getDialect = (language: string, englishDialect: string, spanishDialect: string, portugeuseDialect: string) => {
         let dialect = language
-        if (language === "enUS") if (englishDialect === "UK") dialect = "esGB"
+        if (language === "enUS") if (englishDialect === "UK") dialect = "enGB"
         if (language === "esLA") if (spanishDialect === "ES") dialect = "esES"
         if (language === "ptBR") if (portugeuseDialect === "PT") dialect = "ptPT"
         if (dialect === "all") dialect = "enUS"
