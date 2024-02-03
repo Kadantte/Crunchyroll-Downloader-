@@ -3,7 +3,7 @@ import React, {useState, useEffect, useContext} from "react"
 import EpisodeContainer from "./EpisodeContainer"
 import Reorder from "react-reorder"
 import {ClearAllContext} from "../renderer"
-import {CrunchyrollEpisode, FFmpegProgress} from "crunchyroll.ts"
+import {CrunchyrollEpisode, FFmpegProgress} from "../structures/types"
 import "../styles/episodecontainerlist.less"
 
 const EpisodeContainerList: React.FunctionComponent = (props) => {

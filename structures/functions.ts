@@ -4,7 +4,8 @@ import path from "path"
 
 export default class functions {
     public static download = async (link: string, dest: string) => {
-        const headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36", "referer": "https://www.pixiv.net/"}
+        const headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36"}
+        console.log(link)
         const bin = await axios.get(link, {responseType: "arraybuffer", headers}).then((r) => r.data)
         fs.writeFileSync(dest, Buffer.from(bin, "binary"))
     }

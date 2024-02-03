@@ -1,30 +1,46 @@
-import {CrunchyrollEpisode, FFmpegProgress} from "crunchyroll.ts"
+import {CrunchyrollEpisode, FFmpegProgress} from "../structures/types"
 import {ipcRenderer} from "electron"
+import {WebsiteContext} from "../renderer"
 import {shell} from "@electron/remote"
 import functions from "../structures/functions"
-import React, {useState, useEffect, useRef, useReducer} from "react"
-import mp4Label from "../assets/mp4Label.png"
+import React, {useState, useEffect, useRef, useReducer, useContext} from "react"
 import {ProgressBar} from "react-bootstrap"
-import mp3Label from "../assets/mp3Label.png"
-import m3u8Label from "../assets/m3u8Label.png"
-import pngLabel from "../assets/pngLabel.png"
-import assLabel from "../assets/assLabel.png"
-import mkvLabel from "../assets/mkvLabel.png"
-import webmLabel from "../assets/webmLabel.png"
-import closeContainer from "../assets/closeContainer.png"
-import pauseButton from "../assets/pauseButton.png"
-import playButton from "../assets/playButton.png"
-import stopButton from "../assets/stopButton.png"
-import locationButton from "../assets/locationButton.png"
-import trashButton from "../assets/trashButton.png"
-import closeContainerHover from "../assets/closeContainer-hover.png"
-import pauseButtonHover from "../assets/pauseButton-hover.png"
-import playButtonHover from "../assets/playButton-hover.png"
-import stopButtonHover from "../assets/stopButton-hover.png"
-import locationButtonHover from "../assets/locationButton-hover.png"
-import trashButtonHover from "../assets/trashButton-hover.png"
-import playVideo from "../assets/playVideo.png"
-import playVideoHover from "../assets/playVideo-hover.png"
+import mp4Label from "../assets/crunchyroll/mp4Label.png"
+import mp3Label from "../assets/crunchyroll/mp3Label.png"
+import m3u8Label from "../assets/crunchyroll/m3u8Label.png"
+import pngLabel from "../assets/crunchyroll/pngLabel.png"
+import assLabel from "../assets/crunchyroll/assLabel.png"
+import vttLabel from "../assets/hidive/vttLabel.png"
+import mkvLabel from "../assets/crunchyroll/mkvLabel.png"
+import webmLabel from "../assets/crunchyroll/webmLabel.png"
+import closeContainerCR from "../assets/crunchyroll/closeContainer.png"
+import closeContainerHoverCR from "../assets/crunchyroll/closeContainer-hover.png"
+import pauseButtonCR from "../assets/crunchyroll/pauseButton.png"
+import pauseButtonHoverCR from "../assets/crunchyroll/pauseButton-hover.png"
+import playButtonCR from "../assets/crunchyroll/playButton.png"
+import playButtonHoverCR from "../assets/crunchyroll/playButton-hover.png"
+import stopButtonCR from "../assets/crunchyroll/stopButton.png"
+import stopButtonHoverCR from "../assets/crunchyroll/stopButton-hover.png"
+import locationButtonCR from "../assets/crunchyroll/locationButton.png"
+import locationButtonHoverCR from "../assets/crunchyroll/locationButton-hover.png"
+import trashButtonCR from "../assets/crunchyroll/trashButton.png"
+import trashButtonHoverCR from "../assets/crunchyroll/trashButton-hover.png"
+import playVideoCR from "../assets/crunchyroll/playVideo.png"
+import playVideoHoverCR from "../assets/crunchyroll/playVideo-hover.png"
+import closeContainerHI from "../assets/hidive/closeContainer.png"
+import closeContainerHoverHI from "../assets/hidive/closeContainer-hover.png"
+import pauseButtonHI from "../assets/hidive/pauseButton.png"
+import pauseButtonHoverHI from "../assets/hidive/pauseButton-hover.png"
+import playButtonHI from "../assets/hidive/playButton.png"
+import playButtonHoverHI from "../assets/hidive/playButton-hover.png"
+import stopButtonHI from "../assets/hidive/stopButton.png"
+import stopButtonHoverHI from "../assets/hidive/stopButton-hover.png"
+import locationButtonHI from "../assets/hidive/locationButton.png"
+import locationButtonHoverHI from "../assets/hidive/locationButton-hover.png"
+import trashButtonHI from "../assets/hidive/trashButton.png"
+import trashButtonHoverHI from "../assets/hidive/trashButton-hover.png"
+import playVideoHI from "../assets/hidive/playVideo.png"
+import playVideoHoverHI from "../assets/hidive/playVideo-hover.png"
 import pSBC from "shade-blend-color"
 import "../styles/episodecontainer.less"
 
@@ -38,6 +54,7 @@ export interface EpisodeContainerProps {
 }
 
 const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props: EpisodeContainerProps) => {
+    const {website, setWebsite} = useContext(WebsiteContext)
     const [resolution, setResolution] = useState(0)
     const [paused, setPaused] = useState(false)
     const [deleted, setDeleted] = useState(false)
@@ -54,7 +71,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
     const [hoverTrash, setHoverTrash] = useState(false)
     const [hoverVideo, setHoverVideo] = useState(false)
     const [progressColor, setProgressColor] = useState("")
-    const [backgroundColor, setBackgroundColor] = useState("")
+    const [backgroundColorCR, setBackgroundColorCR] = useState("")
+    const [backgroundColorHI, setBackgroundColorHI] = useState("")
     const [clearSignal, setClearSignal] = useState(false)
     const [stopSignal, setStopSignal] = useState(false)
     const [deleteSignal, setDeleteSignal] = useState(false)
@@ -168,12 +186,17 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
     }
 
     const updateBackgroundColor = async () => {
-        const colors = ["#f6642c", "#f6432c", "#f62c55", "#2c79f6", "#f62c98", "#f62c4a", "#2c69f6"]
+        let colorsCR = ["#f6642c", "#f6432c", "#f62c55", "#2c79f6", "#f62c98", "#f62c4a", "#2c69f6"]
+        let colorsHI = ["#2c48f6", "#322cf6", "#2c32f6", "#5310fe", "#1f93ff", "#1f64ff", "#2040ff"]
         const container = episodeContainerRef.current?.querySelector(".episode-container") as HTMLElement
         if (!container) return
-        if (!backgroundColor) {
-            const color = colors[Math.floor(Math.random() * colors.length)]
-            setBackgroundColor(color)
+        if (!backgroundColorCR) {
+            const colorCR = colorsCR[Math.floor(Math.random() * colorsCR.length)]
+            setBackgroundColorCR(colorCR)
+        }
+        if (!backgroundColorHI) {
+            const colorHI = colorsHI[Math.floor(Math.random() * colorsHI.length)]
+            setBackgroundColorHI(colorHI)
         }
         const theme = await ipcRenderer.invoke("get-theme")
         if (theme === "light") {
@@ -181,20 +204,32 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             text.forEach((t) => {
                 t.style.color = "black"
             })
-            container.style.backgroundColor = backgroundColor
-            container.style.border = `2px solid ${pSBC(0.4, backgroundColor)}`
+            if (website === "crunchyroll") {
+                container.style.backgroundColor = backgroundColorCR
+                container.style.border = `2px solid ${pSBC(0.4, backgroundColorCR)}`
+            } else if (website === "hidive") {
+                container.style.backgroundColor = backgroundColorHI
+                container.style.border = `2px solid ${pSBC(0.4, backgroundColorHI)}`
+            }
         } else {
             const text = episodeContainerRef.current?.querySelectorAll(".ep-text, .ep-text-alt") as NodeListOf<HTMLElement>
-            text.forEach((t) => {
-                t.style.color = backgroundColor
-            })
+            if (website === "crunchyroll") {
+                text.forEach((t) => {
+                    t.style.color = backgroundColorCR
+                })
+            } else if (website === "hidive") {
+                text.forEach((t) => {
+                    t.style.color = backgroundColorHI
+                })
+            }
             container.style.backgroundColor = "#090409"
             container.style.border = `2px solid #090409`
         }
     }
 
     const updateProgressColor = () => {
-        const colors = ["#214dff", "#ff2ba7", "#ff2942", "#ff2994", "#c229ff", "#5b29ff", "#29b1ff", "#ff8d29"]
+        let colors = ["#214dff", "#ff2ba7", "#ff2942", "#ff2994", "#c229ff", "#5b29ff", "#29b1ff", "#ff8d29"]
+        if (website === "hidive") colors = ["#25aaff", "#4425ff", "#4425ff", "#0d7fff", "#282dff", "#30ccff", "#3136ff"]
         const progressBar = progressBarRef.current?.querySelector(".progress-bar") as HTMLElement
         if (progress < 0 && !output) {
              setProgressColor("#573dff")
@@ -245,7 +280,11 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
     }
 
     const mouseEnter = () => {
-        document.documentElement.style.setProperty("--selection-color", pSBC(0.5, backgroundColor))
+        if (website === "crunchyroll") {
+            document.documentElement.style.setProperty("--selection-color", pSBC(0.5, backgroundColorCR))
+        } else if (website === "hidive") {
+            document.documentElement.style.setProperty("--selection-color", pSBC(0.5, backgroundColorHI))
+        }
     }
 
     const mouseLeave = () => {
@@ -260,6 +299,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
         if (props.format === "mp3") return mp3Label
         if (props.format === "m3u8") return m3u8Label
         if (props.format === "ass") return assLabel
+        if (props.format === "vtt") return vttLabel
         if (props.format === "png") return pngLabel
     }
 
@@ -269,14 +309,70 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
 
     const openAnime = async (url: string) => {
         let anime = ""
-        if (true) {
+        if (website === "crunchyroll") {
             const html = await fetch(url).then((r) => r.text())
             const id = html.match(/(?<="series_id":")(.*)(?=","series_title":)/gm)?.[0]
             anime = `https://crunchyroll.com/series/${id}`
-        } else {
-            // anime = url.match(/(.*?)(?=\/e)/)![0]
+        } else if (website === "hidive") {
+            anime = `https://www.hidive.com/tv/${props.episode.series_name.toLowerCase().replace(/ +/g, "-").replace(/\W/g, "")}`
         }
         ipcRenderer.invoke("open-url", anime)
+    }
+
+    const getPlayVideoIcon = () => {
+        if (website === "crunchyroll") {
+            return hoverVideo ? playVideoHoverCR : playVideoCR
+        } else if (website === "hidive") {
+            return hoverVideo ? playVideoHoverHI : playVideoHI
+        }
+    }
+
+    const getCloseContainerIcon = () => {
+        if (website === "crunchyroll") {
+            return hoverClose ? closeContainerHoverCR : closeContainerCR
+        } else if (website === "hidive") {
+            return hoverClose ? closeContainerHoverHI : closeContainerHI
+        }
+    }
+
+    const getPlayButton = () => {
+        if (website === "crunchyroll") {
+            return hoverPlay ? playButtonHoverCR : playButtonCR
+        } else if (website === "hidive") {
+            return hoverPlay ? playButtonHoverHI : playButtonHI
+        }
+    }
+
+    const getPauseButton = () => {
+        if (website === "crunchyroll") {
+            return hoverPause ? pauseButtonHoverCR : pauseButtonCR
+        } else if (website === "hidive") {
+            return hoverPause ? pauseButtonHoverHI : pauseButtonHI
+        }
+    }
+
+    const getStopButton = () => {
+        if (website === "crunchyroll") {
+            return hoverStop ? stopButtonHoverCR : stopButtonCR
+        } else if (website === "hidive") {
+            return hoverStop ? stopButtonHoverHI : stopButtonHI
+        }
+    }
+
+    const getLocationButton = () => {
+        if (website === "crunchyroll") {
+            return hoverLocation ? locationButtonHoverCR : locationButtonCR
+        } else if (website === "hidive") {
+            return hoverLocation ? locationButtonHoverHI : locationButtonHI
+        }
+    }
+
+    const getTrashButton = () => {
+        if (website === "crunchyroll") {
+            return hoverTrash ? trashButtonHoverCR : trashButtonCR
+        } else if (website === "hidive") {
+            return hoverTrash ? trashButtonHoverHI : trashButtonHI
+        }
     }
 
     return (
@@ -289,7 +385,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
                 <div className="ep-name">
                     <p className="ep-text hover" onMouseDown={(event) => event.stopPropagation()}><span onClick={() => ipcRenderer.invoke("open-url", props.episode.url)}>{props.episode.name}</span></p>
                     <img className="ep-label" src={getLabel()}/>
-                    {output ? <img className="ep-video" width="30" height="30" src={hoverVideo ? playVideoHover : playVideo} onClick={videoButton} onMouseEnter={() => setHoverVideo(true)} onMouseLeave={() => setHoverVideo(false)} onMouseDown={(event) => event.stopPropagation()}/> : null}
+                    {output ? <img className="ep-video" width="30" height="30" src={getPlayVideoIcon()} onClick={videoButton} onMouseEnter={() => setHoverVideo(true)} onMouseLeave={() => setHoverVideo(false)} onMouseDown={(event) => event.stopPropagation()}/> : null}
                 </div>
                 <div className="ep-info">
                     <div className="ep-info-col">
@@ -306,14 +402,14 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
                 </div>
             </div>
             <div className="ep-buttons">
-                {hover ? <img className="ep-button close-container" width="28" height="28" onMouseDown={(event) => event.stopPropagation()} src={hoverClose ? closeContainerHover : closeContainer} onClick={closeDownload} onMouseEnter={() => setHoverClose(true)} onMouseLeave={() => setHoverClose(false)}/> : null}
+                {hover ? <img className="ep-button close-container" width="28" height="28" onMouseDown={(event) => event.stopPropagation()} src={getCloseContainerIcon()} onClick={closeDownload} onMouseEnter={() => setHoverClose(true)} onMouseLeave={() => setHoverClose(false)}/> : null}
                 <div className="ep-button-row">
-                    <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={paused ? (hoverPlay ? playButtonHover : playButton) : (hoverPause ? pauseButtonHover : pauseButton)} onClick={handlePause} onMouseEnter={() => {setHoverPlay(true); setHoverPause(true)}} onMouseLeave={() => {setHoverPlay(false); setHoverPause(false)}}/>
-                    <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={hoverStop ? stopButtonHover : stopButton} onClick={stopDownload} onMouseEnter={() => setHoverStop(true)} onMouseLeave={() => setHoverStop(false)}/>
+                    <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={paused ? (getPlayButton()) : (getPauseButton())} onClick={handlePause} onMouseEnter={() => {setHoverPlay(true); setHoverPause(true)}} onMouseLeave={() => {setHoverPlay(false); setHoverPause(false)}}/>
+                    <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={getStopButton()} onClick={stopDownload} onMouseEnter={() => setHoverStop(true)} onMouseLeave={() => setHoverStop(false)}/>
                 </div>
                 <div className="ep-button-row">
-                    {output ? <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={hoverLocation ? locationButtonHover : locationButton} onClick={openLocation} onMouseEnter={() => setHoverLocation(true)} onMouseLeave={() => setHoverLocation(false)}/> : null}
-                    {output ? <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={hoverTrash ? trashButtonHover : trashButton} onClick={deleteDownload} onMouseEnter={() => setHoverTrash(true)} onMouseLeave={() => setHoverTrash(false)}/> : null}    
+                    {output ? <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={getLocationButton()} onClick={openLocation} onMouseEnter={() => setHoverLocation(true)} onMouseLeave={() => setHoverLocation(false)}/> : null}
+                    {output ? <img className="ep-button" width="50" height="50" onMouseDown={(event) => event.stopPropagation()} src={getTrashButton()} onClick={deleteDownload} onMouseEnter={() => setHoverTrash(true)} onMouseLeave={() => setHoverTrash(false)}/> : null}    
                 </div>
             </div>
             </div>

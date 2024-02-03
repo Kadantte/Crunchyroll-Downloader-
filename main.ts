@@ -1,4 +1,4 @@
-import {app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, session, protocol, webContents} from "electron"
+import {app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, session, protocol, webContents, components} from "electron"
 import {autoUpdater} from "electron-updater"
 import windowStateKeeper from "electron-window-state"
 import debounce from "debounce"
@@ -7,7 +7,9 @@ import fs from "fs"
 import axios from "axios"
 import Store from "electron-store"
 import functions from "./structures/functions"
-import crunchyroll, {FFmpegProgress, DownloadOptions, CrunchyrollEpisode} from "crunchyroll.ts"
+import util from "./structures/util"
+import {FFmpegProgress, DownloadOptions, CrunchyrollEpisode} from "./structures/types"
+import crunchyroll from "crunchyroll.ts"
 import process from "process"
 import pack from "./package.json"
 import "./dev-app-update.yml"
@@ -88,6 +90,27 @@ ipcMain.handle("get-token", () => {
   return store.get("token", "")
 })
 
+ipcMain.handle("get-account-id", () => {
+  return store.get("account_id", "")
+})
+
+ipcMain.handle("get-hidive-cookie", () => {
+  return store.get("hidive-cookie", "")
+})
+
+ipcMain.handle("get-hidive-email", () => {
+  return store.get("hidive-email", "")
+})
+
+ipcMain.handle("get-hidive-password", () => {
+  return store.get("hidive-password", "")
+})
+
+ipcMain.handle("object-url", (event, data: any) => {
+  const blob = new Blob([data])
+  return URL.createObjectURL(blob)
+})
+
 ipcMain.handle("download-url", (event, url, html) => {
   if (window?.isMinimized()) window?.restore()
   window?.focus()
@@ -98,7 +121,7 @@ const openWebsite = async () => {
   if (!website) {
     let websiteState = windowStateKeeper({file: "website.json", defaultWidth: 800, defaultHeight: 600})
     website = new BrowserWindow({width: websiteState.width, height: websiteState.height, minWidth: 790, minHeight: 550, frame: false, backgroundColor: "#ffffff", center: false, webPreferences: {nodeIntegration: true, webviewTag: true, contextIsolation: false}})
-    await website.loadFile(path.join(__dirname, "crunchyroll.html"))
+    await website.loadFile(path.join(__dirname, "browser.html"))
     require("@electron/remote/main").enable(website.webContents)
     website.on("resize", debounce((event: any) => websiteState.saveState(event.sender), 500))
     website?.on("closed", () => {
@@ -109,6 +132,15 @@ const openWebsite = async () => {
     website.focus()
   }
 }
+
+ipcMain.handle("change-site", async (event, site: string) => {
+  website?.webContents.send("site-change", site)
+  store.set("site", site)
+})
+
+ipcMain.handle("get-site", async (event) => {
+  return store.get("site", "crunchyroll")
+})
 
 ipcMain.handle("open-url", async (event, url: string) => {
   await openWebsite()
@@ -338,7 +370,7 @@ const downloadEpisode = async (info: any, episode: CrunchyrollEpisode) => {
   if (info.audioOnly) format = "mp3"
   if (info.skipConversion) format = "m3u8"
   if (info.thumbnails) format = "png"
-  let dest = crunchyroll.util.parseDest(episode, format, info.dest, info.template, info.playlist, info.language)
+  let dest = util.parseDest(episode, format, info.dest, info.template, info.playlist, info.language)
   const videoProgress = (progress: FFmpegProgress, resume: () => boolean) => {
     window?.webContents.send("download-progress", {id: info.id, progress})
     let index = active.findIndex((e) => e.id === info.id)
@@ -367,8 +399,8 @@ const downloadEpisode = async (info: any, episode: CrunchyrollEpisode) => {
         window?.webContents.send("download-ended", {id: info.id, output: dest, skipped: true})
         return nextQueue(info)
       }
-      const duration1 = await crunchyroll.util.parseDuration(dest, ffmpegPath)
-      const duration2 = await crunchyroll.util.parseDuration(info.playlist, ffmpegPath)
+      const duration1 = await util.parseDuration(dest, ffmpegPath)
+      const duration2 = await util.parseDuration(info.playlist, ffmpegPath)
       if (Math.abs(Math.round(duration1) - Math.round(duration2)) < 500) {
         window?.webContents.send("download-ended", {id: info.id, output: dest, skipped: true})
         return nextQueue(info)
@@ -378,9 +410,9 @@ const downloadEpisode = async (info: any, episode: CrunchyrollEpisode) => {
   info.ffmpegPath = ffmpegPath
   let output = ""
   if (info.thumbnails) {
-    output = await crunchyroll.util.downloadThumbnails(episode, info.dest, info)
+    output = await util.downloadThumbnails(episode, info.dest, info)
   } else {
-    output = await crunchyroll.util.downloadEpisode(episode, info.dest, info, videoProgress)
+    output = await util.downloadEpisode(episode, info.dest, info, videoProgress)
   }
   if (info.skipConversion) {
     await functions.download(output, dest)
@@ -393,7 +425,9 @@ const downloadEpisode = async (info: any, episode: CrunchyrollEpisode) => {
 const downloadSubtitles = async (info: any) => {
   let qIndex = queue.findIndex((q) => q.info.id === info.id)
   if (qIndex !== -1) queue[qIndex].started = true
-  let output = crunchyroll.util.parseDest(info.episode, "ass", info.dest, info.template, null, info.language)
+  let format = "ass"
+  if (info.vtt) format = "vtt"
+  let output = util.parseDest(info.episode, format, info.dest, info.template, null, info.language)
   const folder = path.dirname(output)
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recursive: true})
   history.push({id: info.id, dest: output})
@@ -401,7 +435,7 @@ const downloadSubtitles = async (info: any) => {
   window?.webContents.send("download-started", {id: info.id, episode: info.episode, format: "ass", kind: info.kind})
   await functions.timeout(100)
   if (fs.existsSync(output)) {
-    window?.webContents.send("download-ended", {id: info.id, output, skipped: true})
+    window?.webContents.send("download-ended", {id: info.id, output, skipped: info.noSkip ? false : true})
     return nextQueue(info)
   }
   const data = await axios.get(info.url).then((r) => r.data)
@@ -412,6 +446,7 @@ const downloadSubtitles = async (info: any) => {
 
 ipcMain.handle("download-subtitles", async (event, info) => {
   let format = "ass"
+  if (info.vtt) format = "vtt"
   window?.webContents.send("download-waiting", {id: info.id, kind: info.kind, episode: info.episode, format})
   queue.push({info, started: false, format})
   const settings = store.get("settings", {}) as any
@@ -423,6 +458,14 @@ ipcMain.handle("download-subtitles", async (event, info) => {
       window?.webContents.send("download-error", "download")
     })
   }
+})
+
+ipcMain.handle("download-ass", async (event, info, ass) => {
+  let output = util.parseDest(info.episode, "ass", info.dest, info.template, null, info.language)
+  const folder = path.dirname(output)
+  if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recursive: true})
+  fs.writeFileSync(output, ass)
+  return output
 })
 
 ipcMain.handle("download-error", async (event, info) => {
@@ -500,9 +543,21 @@ ipcMain.handle("download", async (event, info) => {
   }
 })
 
+ipcMain.handle("device-private-key", async (event) => {
+  return fs.readFileSync(path.join(path.dirname(ffmpegPath), "device_private_key"))
+})
+
+ipcMain.handle("device-client-id-blob", async (event) => {
+  return fs.readFileSync(path.join(path.dirname(ffmpegPath), "device_client_id_blob"))
+})
+
 ipcMain.handle("webview-id", async (event, id) => {
   const contents = webContents.fromId(id)!
-  contents.debugger.attach("1.3")
+  try {
+    contents.debugger.attach("1.3")
+  } catch {
+    return
+  }
   
   contents.debugger.on("detach", (event, reason) => { 
     console.log("Debugger detached due to: ", reason)
@@ -514,12 +569,30 @@ ipcMain.handle("webview-id", async (event, id) => {
         let cookie = params.headers.cookie
         store.set("cookie", cookie)
       }
+      if (params.headers["referer"] === "https://www.hidive.com/account/login") {
+        let cookie = params.headers.cookie
+        store.set("hidive-cookie", cookie)
+      }
+    }
+    if (method === "Network.requestWillBeSent") {
+      if (params.request.method === "POST" && params.request.headers["Referer"] === "https://www.hidive.com/account/login") {
+        contents.debugger.sendCommand("Network.getRequestPostData", {requestId: params.requestId}).then((response) => {
+          const params = new URLSearchParams(response.postData)
+          const email = params.get("Email")
+          const password = params.get("Password")
+          if (email && password) {
+            store.set("hidive-email", email)
+            store.set("hidive-password", password)
+          }
+        })
+      }
     }
     if (method === "Network.responseReceived") {
       if (params.response.url === "https://www.crunchyroll.com/auth/v1/token") {
         contents.debugger.sendCommand("Network.getResponseBody", {requestId: params.requestId}).then((response) => {
-          const token = JSON.parse(response.body).access_token
-          store.set("token", token)
+          const body = JSON.parse(response.body)
+          store.set("token", body.access_token)
+          if (body.account_id) store.set("account_id", body.account_id)
         })
       }
     }
@@ -539,7 +612,8 @@ if (!singleLock) {
     }
   })
 
-  app.on("ready", () => {
+  app.on("ready", async () => {
+    await components.whenReady()
     let mainWindowState = windowStateKeeper({file: "main.json", defaultWidth: 800, defaultHeight: 600})
     window = new BrowserWindow({width: mainWindowState.width, height: mainWindowState.height, minWidth: 790, minHeight: 550, frame: false, backgroundColor: "#f97540", center: true, webPreferences: {nodeIntegration: true, contextIsolation: false}})
     window.loadFile(path.join(__dirname, "index.html"))
@@ -556,20 +630,9 @@ if (!singleLock) {
     window.on("closed", () => {
       window = null
     })
-    try {
-      window.webContents.debugger.attach("1.3")
-    } catch (error) {
-      console.log("Debugger attach failed: ", error)
-    }
     globalShortcut.register("Control+Shift+I", () => {
       window?.webContents.toggleDevTools()
       website?.webContents.toggleDevTools()
-    })
-    session.defaultSession.webRequest.onSendHeaders({urls: ["https://www.crunchyroll.com/", "https://www.crunchyroll.com/login"]}, (details) => {
-      let cookie = details.requestHeaders["Cookie"]
-      console.log(cookie)
-      cookie = cookie.match(/(__cf_bm)(.*)/)?.[0]!
-      store.set("cookie", cookie)
     })
     session.defaultSession.webRequest.onCompleted({urls: ["https://www.crunchyroll.com/cms/*"]}, (details) => {
       if (details.url.includes("objects/")) store.set("object", encodeURI(details.url))

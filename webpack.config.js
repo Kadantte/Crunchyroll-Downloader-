@@ -34,10 +34,10 @@ module.exports = [
   },
   {
     target: "electron-renderer",
-    entry: "./crunchyroll",
+    entry: "./browser",
     mode: "production",
     node: {__dirname: false},
-    output: {filename: "crunchyroll.js", path: path.resolve(__dirname, "./dist"), publicPath: "./"},
+    output: {filename: "browser.js", path: path.resolve(__dirname, "./dist"), publicPath: "./"},
     resolve: {extensions: [".js", ".jsx", ".ts", ".tsx"], mainFields: ["main", "module", "browser"], alias: {"react-dom$": "react-dom/profiling", "scheduler/tracing": "scheduler/tracing-profiling"}},
     optimization: {minimize: true, minimizer: [new TerserJSPlugin({extractComments: false})], moduleIds: "named"},
     module: {
@@ -51,8 +51,8 @@ module.exports = [
     },
     plugins: [
       new ForkTsCheckerWebpackPlugin(),
-      new HtmlWebpackPlugin({filename: "crunchyroll.html", template: path.resolve(__dirname, "./crunchyroll.html"), minify: true}),
-      new MiniCssExtractPlugin({filename: "crunchyroll.css", chunkFilename: "crunchyroll.css"}),
+      new HtmlWebpackPlugin({filename: "browser.html", template: path.resolve(__dirname, "./browser.html"), minify: true}),
+      new MiniCssExtractPlugin({filename: "browser.css", chunkFilename: "browser.css"}),
       new webpack.DefinePlugin({"process.env.FLUENTFFMPEG_COV": false})
     ]
   },

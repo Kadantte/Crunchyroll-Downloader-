@@ -4,3 +4,5 @@ node_modules
 .env
 .DS_Store
 ffmpeg/.DS_Store
+ffmpeg/device_client_id_blob
+ffmpeg/device_private_key

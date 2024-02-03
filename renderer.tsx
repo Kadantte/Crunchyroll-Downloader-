@@ -12,6 +12,7 @@ import ContextMenu from "./components/ContextMenu"
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.less"
 
+export const WebsiteContext = React.createContext<any>(null)
 export const ClearAllContext = React.createContext<any>(null)
 export const DeleteAllContext = React.createContext<any>(null)
 export const StopAllContext = React.createContext<any>(null)
@@ -30,6 +31,7 @@ export const SpanishDialectContext = React.createContext<any>(null)
 export const PortugeuseDialectContext = React.createContext<any>(null)
 
 const App: React.FunctionComponent = () => {
+  const [website, setWebsite] = useState("crunchyroll")
   const [clearAll, setClearAll] = useState(false)
   const [deleteAll, setDeleteAll] = useState(false)
   const [stopAll, setStopAll] = useState(false)
@@ -61,17 +63,19 @@ const App: React.FunctionComponent = () => {
     <StopAllContext.Provider value={{stopAll, setStopAll}}>
     <DeleteAllContext.Provider value={{deleteAll, setDeleteAll}}>
     <ClearAllContext.Provider value={{clearAll, setClearAll}}>
-    <main className="app">
-      <TitleBar/>
-      <ContextMenu/>
-      <VersionDialog/>
-      <LoginDialog/>
-      <AdvancedSettings/>
-      <LogoBar/>
-      <SearchBar/>
-      <GroupAction/>
-      <EpisodeContainerList/>
-    </main>
+    <WebsiteContext.Provider value={{website, setWebsite}}>
+      <main className="app">
+        <TitleBar/>
+        <ContextMenu/>
+        <VersionDialog/>
+        <LoginDialog/>
+        <AdvancedSettings/>
+        <LogoBar/>
+        <SearchBar/>
+        <GroupAction/>
+        <EpisodeContainerList/>
+      </main>
+    </WebsiteContext.Provider>
     </ClearAllContext.Provider>
     </DeleteAllContext.Provider>
     </StopAllContext.Provider>

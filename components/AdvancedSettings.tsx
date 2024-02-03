@@ -1,11 +1,13 @@
 import {ipcRenderer} from "electron"
 import React, {useContext, useEffect, useState} from "react"
 import {Dropdown, DropdownButton} from "react-bootstrap"
+import {WebsiteContext} from "../renderer"
 import {TemplateContext, VideoQualityContext, TypeContext, LanguageContext, QualityContext, CodecContext,
 FormatContext, QueueContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext} from "../renderer"
 import "../styles/advancedsettings.less"
 
 const AdvancedSettings: React.FunctionComponent = (props) => {
+    const {website, setWebsite} = useContext(WebsiteContext)
     const {template, setTemplate} = useContext(TemplateContext)
     const {videoQuality, setVideoQuality} = useContext(VideoQualityContext)
     const [visible, setVisible] = useState(false)
@@ -166,6 +168,7 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                                     <Dropdown.Item className="small-drop" active={codec === "vp9"} onClick={() => setCodec("vp9")}>VP9</Dropdown.Item>
                                 </DropdownButton>
                             </div>
+                            {website === "crunchyroll" ? <>
                             <div className="settings-row">
                                 <p className="settings-text">English Dialect: </p>
                                 <DropdownButton className="small-drop" title={englishDialect} drop="down">
@@ -186,7 +189,7 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                                     <Dropdown.Item className="small-drop" active={portugeuseDialect === "BR"} onClick={() => setPortugeuseDialect("BR")}>BR</Dropdown.Item>
                                     <Dropdown.Item className="small-drop" active={portugeuseDialect === "PT"} onClick={() => setPortugeuseDialect("PT")}>PT</Dropdown.Item>
                                 </DropdownButton>
-                            </div>
+                            </div></> : null}
                             <div className="settings-row">
                                 <button onClick={deleteCookie} className="cookie-button">Delete Cookies</button>
                                 {cookieDeleted ? <p className="cookie-text">Deleted!</p> : null}
