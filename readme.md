@@ -50,7 +50,7 @@ VP9 - Better quality and faster than VP8. (Approx. size - 190MB)
 
 ### CDM
 
-To download videos from Crunchyroll you have to download a CDM and place the files `device_private_key` and `device_client_id_blob` into the ffmpeg folder. You can find the folder in the location where the app is installed. I won't distribute these files but you can find guides on how to get them online.
+To download videos from Crunchyroll you have to download a CDM and place the files `device_private_key` and `device_client_id_blob` into the ffmpeg folder. You can find the folder in the location where the app is installed. I won't distribute these files but you can find guides on how to get them online. You also have to login to your account in order for it to work.
 
 ### Installation
 
