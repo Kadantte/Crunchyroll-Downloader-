@@ -2,6 +2,8 @@
 
 <img src="assets/example.png">
 
+<img src="assets/example2.png">
+
 This is a GUI application that lets you download anime episodes from Crunchyroll and HIDIVE.
 
 ### Features:
@@ -60,4 +62,6 @@ You can open an issue on my GitHub repository
 
 ### Important
 
-You may only use this for personal usage/offline viewing only. If you like anime then support the industry by buying merch, DVD's, CR premium, etc. You will need to have an active subscription to download most content. I am not affiliated with Crunchyroll or HIDIVE.
+You may only use this for personal usage/offline viewing only. If you like anime then support the industry by buying merch, DVD's, CR premium, etc. You will need to have an active subscription to download most content. 
+
+I'm not affiliated with Crunchyroll or HIDIVE.
