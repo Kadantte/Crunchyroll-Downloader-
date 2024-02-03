@@ -23,7 +23,7 @@ The application attempts to search for the provided anime, so to download Konosu
 
 This doesn't work for every anime, so for the highest accuracy you can provide a direct link. Links to a specific episode and links to the page of the anime are supported. If you provide a link to the anime page, you can also append a number to download a specific episode range.
 
-Update: Searching with a query isn't supported anymore
+Update: Searching with a query isn't supported anymore.
 
 ### Output Template
 
