@@ -2,7 +2,7 @@
 
 <img src="assets/example.png">
 
-This is a GUI application that lets you download anime episodes from Crunchyroll.
+This is a GUI application that lets you download anime episodes from Crunchyroll and HIDIVE.
 
 ### Features:
 - Download anime episodes in mp4 format, and specify a quality (1080p, 720p, 480p, etc.)
@@ -10,7 +10,7 @@ This is a GUI application that lets you download anime episodes from Crunchyroll
 - Download the audio of an episode in mp3 format
 - Download the m3u8 playlist (very fast, and still playable with the VLC player)
 - Download all of the episode thumbnails in png format
-- Download the subtitles of an episode (ass format)
+- Download the subtitles of an episode (ass or vtt)
 - Download all of the episodes in a season (detected by the link or if the search query has no numbers)
 - If you have a premium account you can login to download premium episodes
 - Use the web browser to download directly from the website
@@ -20,6 +20,8 @@ This is a GUI application that lets you download anime episodes from Crunchyroll
 The application attempts to search for the provided anime, so to download Konosuba for example you can simply type "konosuba". This downloads all episodes, to download a specific episode append a number, ex. "konosuba 1" only downloads the first episode. To download episodes 2-4, you can type "konosuba 2-4". 
 
 This doesn't work for every anime, so for the highest accuracy you can provide a direct link. Links to a specific episode and links to the page of the anime are supported. If you provide a link to the anime page, you can also append a number to download a specific episode range.
+
+Update: Searching with a query isn't supported anymore
 
 ### Output Template
 
@@ -44,14 +46,18 @@ H.265 - Best quality and smallest filesize, but has little support. (Approx. siz
 VP8 - Good quality, small filesize, but slowest. *Setting the codec to VP8 will also force the output format to be WEBM*. (Approx. size - 130MB) \
 VP9 - Better quality and faster than VP8. (Approx. size - 190MB)
 
+### CDM
+
+To download videos from Crunchyroll you have to download a CDM and place the files `device_private_key` and `device_client_id_blob` into the ffmpeg folder. You can find the folder in the location where the app is installed. I won't distribute these files but you can find guides on how to get them online.
+
 ### Installation
 
 Download the latest installer from the [releases](https://github.com/Tenpi/Crunchyroll-Downloader/releases) tab.
 
 ### Bugs and Requests
 
-You can open an issue on my GitHub repository. I appreciate any requests, but I can't guarantee that I will fulfill all of them.
+You can open an issue on my GitHub repository
 
-### Disclaimer
+### Important
 
-This tool is for personal usage/offline viewing convenience only. If you like anime, then support the industry by buying merch, DVD's, CR premium, etc.
+You may only use this for personal usage/offline viewing only. If you like anime then support the industry by buying merch, DVD's, CR premium, etc. You will need to have an active subscription to download most content. I am not affiliated with Crunchyroll or HIDIVE.
