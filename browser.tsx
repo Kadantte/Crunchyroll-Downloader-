@@ -39,8 +39,19 @@ const App: React.FunctionComponent = () => {
             web?.loadURL("https://www.crunchyroll.com/")
         } else if (website === "hidive") {
             web?.loadURL("https://www.hidive.com/")
+            loginToHIDIVE()
         }
     }, [ready, website])
+
+    const loginToHIDIVE = async () => {
+        const cookie = await ipcRenderer.invoke("get-hidive-cookie")
+        const email = await ipcRenderer.invoke("get-hidive-email")
+        const password = await ipcRenderer.invoke("get-hidive-password")
+        if (!cookie && !email && !password) return
+        const data = {ReturnUrl: "/dashboard", TwoFactorAuth: "False", Email: email, Password: password, BillingZipCode: "", BillingAddress: "anime"}
+        const response = await fetch(`https://www.hidive.com/account/login`, {method: "POST", body: JSON.stringify(data), headers: {cookie}}).then((r) => r.text())
+        console.log(response)
+    }
 
     const getSource = () => {
         if (website === "crunchyroll") {
@@ -54,7 +65,7 @@ const App: React.FunctionComponent = () => {
         <WebsiteContext.Provider value={{website, setWebsite}}>
             <main className="app">
                 <BrowserTitleBar/>
-                <webview id="webview" src={getSource()} partition="webview-partition"></webview>
+                <webview id="webview" src={getSource()} partition="persist:webview-partition"></webview>
             </main>
         </WebsiteContext.Provider>
     )

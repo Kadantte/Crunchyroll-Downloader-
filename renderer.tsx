@@ -33,6 +33,8 @@ export const FontSizeContext = React.createContext<any>(null)
 export const FontYPositionContext = React.createContext<any>(null)
 export const FontColorContext = React.createContext<any>(null)
 export const TrimIntroContext = React.createContext<any>(null)
+export const CheckboxModeContext = React.createContext<any>(null)
+export const ThemeContext = React.createContext<any>(null)
 
 const App: React.FunctionComponent = () => {
   const [website, setWebsite] = useState("crunchyroll")
@@ -55,8 +57,12 @@ const App: React.FunctionComponent = () => {
   const [fontColor, setFontColor] = useState("#ffffff")
   const [fontYPosition, setFontYPosition] = useState(20)
   const [trimIntro, setTrimIntro] = useState(true)
+  const [checkboxMode, setCheckboxMode] = useState(false)
+  let [theme, setTheme] = useState("light")
 
   return (
+    <ThemeContext.Provider value={{theme, setTheme}}>
+    <CheckboxModeContext.Provider value={{checkboxMode, setCheckboxMode}}>
     <FontYPositionContext.Provider value={{fontYPosition, setFontYPosition}}>
     <FontSizeContext.Provider value={{fontSize, setFontSize}}>
     <TrimIntroContext.Provider value={{trimIntro, setTrimIntro}}>
@@ -106,6 +112,8 @@ const App: React.FunctionComponent = () => {
     </TrimIntroContext.Provider>
     </FontSizeContext.Provider>
     </FontYPositionContext.Provider>
+    </CheckboxModeContext.Provider>
+    </ThemeContext.Provider>
   )
 }
 

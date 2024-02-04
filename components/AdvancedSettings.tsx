@@ -4,7 +4,7 @@ import {Dropdown, DropdownButton} from "react-bootstrap"
 import {WebsiteContext} from "../renderer"
 import {TemplateContext, VideoQualityContext, TypeContext, LanguageContext, QualityContext, CodecContext,
 FormatContext, QueueContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext, FontColorContext,
-TrimIntroContext, FontSizeContext, FontYPositionContext} from "../renderer"
+TrimIntroContext, FontSizeContext, FontYPositionContext, CheckboxModeContext} from "../renderer"
 import checkboxCR from "../assets/crunchyroll/checkbox.png"
 import checkboxCheckedCR from "../assets/crunchyroll/checkbox-checked.png"
 import checkboxHI from "../assets/hidive/checkbox.png"
@@ -29,6 +29,7 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
     const {fontColor, setFontColor} = useContext(FontColorContext)
     const {fontYPosition, setFontYPosition} = useContext(FontYPositionContext)
     const {trimIntro, setTrimIntro} = useContext(TrimIntroContext)
+    const {checkboxMode, setCheckboxMode} = useContext(CheckboxModeContext)
     const [cookieDeleted, setCookieDeleted] = useState(false)
 
     useEffect(() => {
@@ -60,10 +61,12 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         if (settings.fontSize) setFontSize(settings.fontSize)
         if (settings.fontColor) setFontColor(settings.fontColor)
         if (settings.fontYPosition) setFontYPosition(settings.fontYPosition)
+        if (settings.checkboxMode) setCheckboxMode(settings.checkboxMode)
     }
 
     useEffect(() => {
-        ipcRenderer.invoke("store-settings", {template, videoQuality, codec, queue, englishDialect, spanishDialect, portugeuseDialect, fontColor, fontSize, fontYPosition, trimIntro})
+        ipcRenderer.invoke("store-settings", {template, videoQuality, codec, queue, englishDialect, spanishDialect, 
+        portugeuseDialect, fontColor, fontSize, fontYPosition, trimIntro, checkboxMode})
     })
 
     const ok = () => {
@@ -86,6 +89,7 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         setFontYPosition(20)
         setFontColor("#ffffff")
         setTrimIntro(true)
+        setCheckboxMode(false)
     }
 
     const getCheckboxIcon = (checked: boolean) => {
@@ -278,6 +282,10 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                                 <p className="settings-text">Trim Intro? </p>
                                 <img className="settings-checkbox" src={getCheckboxIcon(trimIntro)} onClick={() => setTrimIntro((prev: boolean) => !prev)}/>
                             </div></> : null}
+                            <div className="settings-row">
+                                <p className="settings-text">Checkbox Mode? </p>
+                                <img className="settings-checkbox" src={getCheckboxIcon(checkboxMode)} onClick={() => setCheckboxMode((prev: boolean) => !prev)}/>
+                            </div>
                             <div className="settings-row">
                                 <button onClick={deleteCookie} className="cookie-button">Delete Cookies</button>
                                 {cookieDeleted ? <p className="cookie-text">Deleted!</p> : null}

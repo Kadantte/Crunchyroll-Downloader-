@@ -135,6 +135,7 @@ const openWebsite = async () => {
     if (website.isMinimized()) website.restore()
     website.focus()
   }
+  updateHIDIVECookie()
 }
 
 ipcMain.handle("capture-html", async (event, url) => {
@@ -570,6 +571,22 @@ ipcMain.handle("device-client-id-blob", async (event) => {
   return fs.readFileSync(path.join(path.dirname(ffmpegPath), "device_client_id_blob"))
 })
 
+const saveHIDIVECookie = async () => {
+  const cookie = await session.defaultSession.cookies.get({url: "https://www.hidive.com/"})
+  store.set("hidive-session", JSON.stringify(cookie[0]))
+}
+
+const updateHIDIVECookie = async () => {
+  let cookie = store.get("hidive-session", "") as any
+  if (cookie) {
+    cookie = JSON.parse(cookie)
+    session.defaultSession.cookies.set({url: "https://www.hidive.com/", 
+      domain: cookie.domain, expirationDate: cookie.expirationDate, secure: cookie.secure,
+      httpOnly: cookie.httpOnly, name: cookie.name, path: cookie.path, 
+      sameSite: cookie.sameSite, value: cookie.value})
+  }
+}
+
 ipcMain.handle("webview-id", async (event, id) => {
   const contents = webContents.fromId(id)!
   try {
@@ -591,6 +608,7 @@ ipcMain.handle("webview-id", async (event, id) => {
       if (params.headers["referer"] === "https://www.hidive.com/account/login") {
         let cookie = params.headers.cookie
         store.set("hidive-cookie", cookie)
+        saveHIDIVECookie()
       }
     }
     if (method === "Network.requestWillBeSent") {

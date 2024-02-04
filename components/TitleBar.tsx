@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useContext} from "react"
 import {ipcRenderer} from "electron"
 import {getCurrentWindow, shell} from "@electron/remote"
-import {WebsiteContext} from "../renderer"
+import {WebsiteContext, ThemeContext} from "../renderer"
 import minimizeButtonCR from "../assets/crunchyroll/minimizeButton.png"
 import minimizeButtonHoverCR from "../assets/crunchyroll/minimizeButton-hover.png"
 import maximizeButtonCR from "../assets/crunchyroll/maximizeButton.png"
@@ -58,7 +58,7 @@ const TitleBar: React.FunctionComponent = (props) => {
     let [hoverWeb, setHoverWeb] = useState(false)
     let [hoverTheme, setHoverTheme] = useState(false)
     let [hoverSite, setHoverSite] = useState(false)
-    let [theme, setTheme] = useState("light")
+    let {theme, setTheme} = useContext(ThemeContext)
     let [hoverSettings, setHoverSettings] = useState(false)
     
     useEffect(() => {

@@ -314,7 +314,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             const id = html.match(/(?<="series_id":")(.*)(?=","series_title":)/gm)?.[0]
             anime = `https://crunchyroll.com/series/${id}`
         } else if (website === "hidive") {
-            anime = `https://www.hidive.com/tv/${props.episode.series_name.toLowerCase().replace(/ +/g, "-").replace(/\W/g, "")}`
+            anime = `https://www.hidive.com/tv/${props.episode.series_name.toLowerCase().replace(/ +/g, "-").replace(/[^a-z0-9-]/gi, "")}`
         }
         ipcRenderer.invoke("open-url", anime)
     }

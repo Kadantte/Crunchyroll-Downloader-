@@ -19,7 +19,7 @@ import HIDIVE from "../structures/hidive"
 import {getKeys} from "../structures/widevine"
 import {TypeContext, QualityContext, CodecContext, FormatContext, LanguageContext, TemplateContext, 
 VideoQualityContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext, FontColorContext,
-TrimIntroContext, FontSizeContext, FontYPositionContext} from "../renderer"
+TrimIntroContext, FontSizeContext, FontYPositionContext, CheckboxModeContext, ThemeContext} from "../renderer"
 
 const SearchBar: React.FunctionComponent = (props) => {
     const {website, setWebsite} = useContext(WebsiteContext)
@@ -37,6 +37,8 @@ const SearchBar: React.FunctionComponent = (props) => {
     const {fontColor, setFontColor} = useContext(FontColorContext)
     const {fontYPosition, setFontYPosition} = useContext(FontYPositionContext)
     const {trimIntro, setTrimIntro} = useContext(TrimIntroContext)
+    const {checkboxMode, setCheckboxMode} = useContext(CheckboxModeContext)
+    const {theme, setTheme} = useContext(ThemeContext)
     const [id, setID] = useState(1)
     const [directory, setDirectory] = useState("")
     const [folderHover, setFolderHover] = useState(false)
@@ -352,7 +354,7 @@ const SearchBar: React.FunctionComponent = (props) => {
         const eps = title.Episodes
         let urls = [] as string[]
         for (let i = 0; i < eps.length; i++) {
-            const url = `https://www.hidive.com/stream/${title.Name.toLowerCase().replace(/ +/g, "-").replace(/\W/g, "")}/${eps[i].VideoKey}`
+            const url = `https://www.hidive.com/stream/${title.Name.toLowerCase().replace(/ +/g, "-").replace(/[^a-z0-9-]/gi, "")}/${eps[i].VideoKey}`
             urls.push(url)
         }
         let episodes = await Promise.all(urls.map((u: any) => parseHIDIVEEpisode(u)))
@@ -445,7 +447,7 @@ const SearchBar: React.FunctionComponent = (props) => {
         if (!searchText) return
         const headers = ["Referer: https://www.hidive.com/"]
         let opts = {resolution: Number(quality), quality: videoQuality, language, template, codec, headers} as any
-        if (trimIntro) opts.seek = 6
+        if (trimIntro) opts.seek = 5
         if (type === "sub") opts.preferSub = true
         if (type === "dub") {
             opts.preferSub = false
@@ -536,7 +538,10 @@ const SearchBar: React.FunctionComponent = (props) => {
         if (website === "hidive") {
             if (format === "png") setFormat("mp4")
         }
-    }, [type, language, format, website])
+        if (checkboxMode) {
+            if (quality === "360" || quality === "240") setQuality("480")
+        }
+    }, [type, language, format, website, checkboxMode, quality])
 
     const getSearchPlaceholder = () => {
         if (website === "crunchyroll") {
@@ -562,6 +567,29 @@ const SearchBar: React.FunctionComponent = (props) => {
         }
     }
 
+    const checkboxClass = () => {
+        if (website === "crunchyroll") {
+            return theme === "light" ? "dropdown-checkbox" : "dropdown-checkbox-dark"
+        } else if (website === "hidive") {
+            return theme === "light" ? "dropdown-checkbox-blue" : "dropdown-checkbox-dark-blue"
+        }
+    }
+
+    const processCheckbox = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value 
+        if (value === "sub") setType("sub")
+        if (value === "dub") setType("dub")
+        if (value === "mp4") setFormat("mp4")
+        if (value === "mp3") setFormat("mp3")
+        if (value === "m3u8") setFormat("m3u8")
+        if (value === "png") setFormat("png")
+        if (value === "ass") setFormat("ass")
+        if (value === "vtt") setFormat("vtt")
+        if (value === "1080") setQuality("1080")
+        if (value === "720") setQuality("720")
+        if (value === "480") setQuality("480")
+    }
+
     return (
         <section className="search-container">
             <div className="search-location">
@@ -577,6 +605,55 @@ const SearchBar: React.FunctionComponent = (props) => {
                 <img className="download-location-img" width="25" height="25" src={getFolderButton()} onMouseEnter={() => setFolderHover(true)} onMouseLeave={() => setFolderHover(false)} onClick={changeDirectory}/>
                 <p><span className="download-location-text" onDoubleClick={() => shell.openPath(directory)}>{directory}</span></p>
             </div>
+            {checkboxMode ?
+            <div className="dropdown-options">
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={type === "sub"} value="sub" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setType("sub")}>sub</label>
+                </div>
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={type === "dub"} value="dub" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setType("dub")}>dub</label>
+                </div>
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={format === "mp4"} value="mp4" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setFormat("mp4")}>mp4</label>
+                </div>
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={format === "mp3"} value="mp3" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setFormat("mp3")}>mp3</label>
+                </div>
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={format === "m3u8"} value="m3u8" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setFormat("m3u8")}>m3u8</label>
+                </div>
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={format === "ass"} value="ass" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setFormat("ass")}>ass</label>
+                </div>
+                {website === "crunchyroll" ?
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={format === "png"} value="png" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setFormat("png")}>png</label>
+                </div> : null}
+                {website === "hidive" ?
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={format === "vtt"} value="vtt" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setFormat("vtt")}>vtt</label>
+                </div> : null}
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={quality === "1080"} value="1080" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setQuality("1080")}>1080p</label>
+                </div>
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={quality === "720"} value="720" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setQuality("720")}>720p</label>
+                </div>
+                <div className="dropdown-checkbox-container">
+                    <input className={checkboxClass()} type="checkbox" checked={quality === "480"} value="480" onChange={processCheckbox}/>
+                    <label className="dropdown-label" onClick={() => setQuality("480")}>480p</label>
+                </div>
+            </div> :
             <div className="dropdown-options">
                 <div className="dropdown-container">
                     <p className="dropdown-label">Type: </p>
@@ -622,7 +699,7 @@ const SearchBar: React.FunctionComponent = (props) => {
                         <Dropdown.Item active={quality === "240"} onClick={() => setQuality("240")}>240p</Dropdown.Item>
                     </DropdownButton>
                 </div>
-            </div>
+            </div>}
         </section>
     )
 }
