@@ -118,16 +118,17 @@ export default class Util {
       return found.reduce((prev, curr) => curr.attributes.RESOLUTION.height > prev.attributes.RESOLUTION.height ? curr : prev)
     }
 
-    public static parseDest = (episode: CrunchyrollEpisode, format: string, dest?: string, template?: string, playlist?: any, language?: string) => {
+    public static parseDest = (episode: CrunchyrollEpisode, format: string, dest?: string, template?: string, playlist?: any, language?: string, key?: string) => {
       if (!dest) dest = "./"
+      if (!key) key = ""
       if (!path.isAbsolute(dest)) {
         const local = __dirname.includes("node_modules") ? path.join(__dirname, "../../../../") : path.join(__dirname, "../../")
         dest = path.join(local, dest)
       }
       if (format === "png") {
-        return `${dest}/${Util.parseTemplate(episode, template, playlist, language)}`
+        return `${dest}/${Util.parseTemplate(episode, template, playlist, language)}${key}`
       }
-      if (!path.extname(dest)) dest += `/${Util.parseTemplate(episode, template, playlist, language)}.${format}`
+      if (!path.extname(dest)) dest += `/${Util.parseTemplate(episode, template, playlist, language)}${key}.${format}`
       return dest
     }
 
@@ -176,18 +177,19 @@ export default class Util {
           video.args("-headers", options.headers[i])
         }
       }
-      let assPath = ""
+      let assFiles = []
       if (options.softSubs && options.subtitles) {
         ffmpegArgs.unshift("-map", "0", "-dn", "-map", "-0:s", "-map", "-0:d")
         for (let i = 0; i < options.subtitles.length; i++) {
           video.input(options.subtitles[i])
           ffmpegArgs.push("-map", `${i + 1}:0`)
           if (options.subtitleNames?.[i]) ffmpegArgs.push(`-metadata:s:s:${i}`, `title=${options.subtitleNames[i]}`)
+          if (!options.subtitles[i].includes("http")) assFiles.push(options.subtitles[i])
         }
       } else if (options.subtitles?.length) {
         ffmpegArgs.unshift("-vf", `ass=${options.subtitles[0]}`)
         video.input(options.subtitles[0])
-        assPath = options.subtitles[0]
+        if (!options.subtitles[0].includes("http")) assFiles.push(options.subtitles[0])
       }
       let metadataPath = ""
       if (options.intro) {
@@ -218,11 +220,13 @@ export default class Util {
       }
       try {
         await process.complete()
+        if (metadataPath) fs.unlinkSync(metadataPath)
+        for (let i = 0; i < assFiles.length; i++) {
+          fs.unlinkSync(assFiles[i])
+        }
       } catch (err) {
         if (!killed) return Promise.reject(err)
       }
-      if (metadataPath) fs.unlinkSync(metadataPath)
-      if (assPath) fs.unlinkSync(assPath)
       return dest as string
     }
 

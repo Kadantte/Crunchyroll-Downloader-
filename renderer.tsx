@@ -29,6 +29,10 @@ export const QueueContext = React.createContext<any>(null)
 export const EnglishDialectContext = React.createContext<any>(null)
 export const SpanishDialectContext = React.createContext<any>(null)
 export const PortugeuseDialectContext = React.createContext<any>(null)
+export const FontSizeContext = React.createContext<any>(null)
+export const FontYPositionContext = React.createContext<any>(null)
+export const FontColorContext = React.createContext<any>(null)
+export const TrimIntroContext = React.createContext<any>(null)
 
 const App: React.FunctionComponent = () => {
   const [website, setWebsite] = useState("crunchyroll")
@@ -36,7 +40,7 @@ const App: React.FunctionComponent = () => {
   const [deleteAll, setDeleteAll] = useState(false)
   const [stopAll, setStopAll] = useState(false)
   const [videoQuality, setVideoQuality] = useState(23)
-  const [codec, setCodec] = useState("copy")
+  const [codec, setCodec] = useState("h.264")
   const [template, setTemplate] = useState("{seasonTitle} {episodeNumber}")
   const [type, setType] = useState("sub")
   const [language, setLanguage] = useState("enUS")
@@ -47,8 +51,16 @@ const App: React.FunctionComponent = () => {
   const [spanishDialect, setSpanishDialect] = useState("LA")
   const [portugeuseDialect, setPortugeuseDialect] = useState("BR")
   const [region, setRegion] = useState("US")
+  const [fontSize, setFontSize] = useState(40)
+  const [fontColor, setFontColor] = useState("#ffffff")
+  const [fontYPosition, setFontYPosition] = useState(20)
+  const [trimIntro, setTrimIntro] = useState(true)
 
   return (
+    <FontYPositionContext.Provider value={{fontYPosition, setFontYPosition}}>
+    <FontSizeContext.Provider value={{fontSize, setFontSize}}>
+    <TrimIntroContext.Provider value={{trimIntro, setTrimIntro}}>
+    <FontColorContext.Provider value={{fontColor, setFontColor}}>
     <CodecContext.Provider value={{codec, setCodec}}>
     <PortugeuseDialectContext.Provider value={{portugeuseDialect, setPortugeuseDialect}}>
     <SpanishDialectContext.Provider value={{spanishDialect, setSpanishDialect}}>
@@ -90,6 +102,10 @@ const App: React.FunctionComponent = () => {
     </SpanishDialectContext.Provider>
     </PortugeuseDialectContext.Provider>
     </CodecContext.Provider>
+    </FontColorContext.Provider>
+    </TrimIntroContext.Provider>
+    </FontSizeContext.Provider>
+    </FontYPositionContext.Provider>
   )
 }
 

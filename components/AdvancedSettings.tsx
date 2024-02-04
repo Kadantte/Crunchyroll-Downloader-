@@ -3,7 +3,12 @@ import React, {useContext, useEffect, useState} from "react"
 import {Dropdown, DropdownButton} from "react-bootstrap"
 import {WebsiteContext} from "../renderer"
 import {TemplateContext, VideoQualityContext, TypeContext, LanguageContext, QualityContext, CodecContext,
-FormatContext, QueueContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext} from "../renderer"
+FormatContext, QueueContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext, FontColorContext,
+TrimIntroContext, FontSizeContext, FontYPositionContext} from "../renderer"
+import checkboxCR from "../assets/crunchyroll/checkbox.png"
+import checkboxCheckedCR from "../assets/crunchyroll/checkbox-checked.png"
+import checkboxHI from "../assets/hidive/checkbox.png"
+import checkboxCheckedHI from "../assets/hidive/checkbox-checked.png"
 import "../styles/advancedsettings.less"
 
 const AdvancedSettings: React.FunctionComponent = (props) => {
@@ -20,6 +25,10 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
     const {englishDialect, setEnglishDialect} = useContext(EnglishDialectContext)
     const {spanishDialect, setSpanishDialect} = useContext(SpanishDialectContext)
     const {portugeuseDialect, setPortugeuseDialect} = useContext(PortugeuseDialectContext)
+    const {fontSize, setFontSize} = useContext(FontSizeContext)
+    const {fontColor, setFontColor} = useContext(FontColorContext)
+    const {fontYPosition, setFontYPosition} = useContext(FontYPositionContext)
+    const {trimIntro, setTrimIntro} = useContext(TrimIntroContext)
     const [cookieDeleted, setCookieDeleted] = useState(false)
 
     useEffect(() => {
@@ -47,10 +56,14 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         if (settings.spanishDialect) setSpanishDialect(settings.spanishDialect)
         if (settings.portugeuseDialect) setPortugeuseDialect(settings.portugeuseDialect)
         if (settings.codec) setCodec(settings.codec)
+        if (settings.trimIntro) setTrimIntro(settings.trimIntro)
+        if (settings.fontSize) setFontSize(settings.fontSize)
+        if (settings.fontColor) setFontColor(settings.fontColor)
+        if (settings.fontYPosition) setFontYPosition(settings.fontYPosition)
     }
 
     useEffect(() => {
-        ipcRenderer.invoke("store-settings", {template, videoQuality, codec, queue, englishDialect, spanishDialect, portugeuseDialect})
+        ipcRenderer.invoke("store-settings", {template, videoQuality, codec, queue, englishDialect, spanishDialect, portugeuseDialect, fontColor, fontSize, fontYPosition, trimIntro})
     })
 
     const ok = () => {
@@ -59,7 +72,7 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
 
     const revert = () => {
         setVideoQuality(23)
-        setCodec("copy")
+        setCodec("h.264")
         setTemplate("{seasonTitle} {episodeNumber}")
         setType("sub")
         setLanguage("enUS")
@@ -69,6 +82,18 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         setEnglishDialect("US")
         setSpanishDialect("LA")
         setPortugeuseDialect("BR")
+        setFontSize(40)
+        setFontYPosition(20)
+        setFontColor("#ffffff")
+        setTrimIntro(true)
+    }
+
+    const getCheckboxIcon = (checked: boolean) => {
+        if (website === "crunchyroll") {
+            return checked ? checkboxCheckedCR : checkboxCR
+        } else if (website === "hidive") {
+            return checked ? checkboxCheckedHI : checkboxHI
+        }
     }
 
     const changeTemplate = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,6 +151,51 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         ipcRenderer.invoke("update-concurrency", Number(value))
     }
 
+    const changeFontSize = (event: React.ChangeEvent<HTMLInputElement>) => {
+        let value = event.target.value
+        if (value.includes(".")) return
+        if (Number.isNaN(Number(value))) return
+        setFontSize(value)
+    }
+
+    const changeFontSizeKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === "ArrowUp") {
+            setFontSize((prev: any) => {
+                return Number(prev) + 10
+            })
+        } else if (event.key === "ArrowDown") {
+            setFontSize((prev: any) => {
+                if (Number(prev) - 10 < 0) return Number(prev)
+                return Number(prev) - 10
+            })
+        }
+    }
+
+    const changeFontColor = (event: React.ChangeEvent<HTMLInputElement>) => {
+        let value = event.target.value
+        if (fontColor !== value) setFontColor(value)
+    }
+
+    const changeFontYPosition = (event: React.ChangeEvent<HTMLInputElement>) => {
+        let value = event.target.value
+        if (value.includes(".")) return
+        if (Number.isNaN(Number(value))) return
+        setFontYPosition(value)
+    }
+
+    const changeFontYPositionKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === "ArrowUp") {
+            setFontYPosition((prev: any) => {
+                return Number(prev) + 10
+            })
+        } else if (event.key === "ArrowDown") {
+            setFontYPosition((prev: any) => {
+                if (Number(prev) - 10 < 0) return Number(prev)
+                return Number(prev) - 10
+            })
+        }
+    }
+
     const deleteCookie = () => {
         ipcRenderer.invoke("delete-cookies")
         setCookieDeleted(true)
@@ -175,7 +245,7 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                                     <Dropdown.Item className="small-drop" active={englishDialect === "US"} onClick={() => setEnglishDialect("US")}>US</Dropdown.Item>
                                     <Dropdown.Item className="small-drop" active={englishDialect === "UK"} onClick={() => setEnglishDialect("UK")}>UK</Dropdown.Item>
                                 </DropdownButton>
-                            </div>
+                            </div></> : null}
                             <div className="settings-row">
                                 <p className="settings-text">Spanish Dialect: </p>
                                 <DropdownButton className="small-drop" title={spanishDialect} drop="down">
@@ -183,12 +253,30 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                                     <Dropdown.Item className="small-drop" active={spanishDialect === "ES"} onClick={() => setSpanishDialect("ES")}>ES</Dropdown.Item>
                                 </DropdownButton>
                             </div>
+                            {website === "crunchyroll" ? <>
                             <div className="settings-row">
                                 <p className="settings-text">Portugeuse Dialect: </p>
                                 <DropdownButton className="small-drop" title={portugeuseDialect} drop="down">
                                     <Dropdown.Item className="small-drop" active={portugeuseDialect === "BR"} onClick={() => setPortugeuseDialect("BR")}>BR</Dropdown.Item>
                                     <Dropdown.Item className="small-drop" active={portugeuseDialect === "PT"} onClick={() => setPortugeuseDialect("PT")}>PT</Dropdown.Item>
                                 </DropdownButton>
+                            </div></> : null}
+                            <div className="settings-row">
+                                <p className="settings-text">Font Size: </p>
+                                <input className="settings-input" type="text" spellCheck="false" value={fontSize} onChange={changeFontSize} onKeyDown={changeFontSizeKey}/>
+                            </div>
+                            <div className="settings-row">
+                                <p className="settings-text">Font Color: </p>
+                                <input className="settings-color-picker" type="color" value={fontColor} onChange={changeFontColor}/>
+                            </div>
+                            <div className="settings-row">
+                                <p className="settings-text">Font Y Position: </p>
+                                <input className="settings-input" type="text" spellCheck="false" value={fontYPosition} onChange={changeFontYPosition} onKeyDown={changeFontYPositionKey}/>
+                            </div>
+                            {website === "hidive" ? <>
+                            <div className="settings-row">
+                                <p className="settings-text">Trim Intro? </p>
+                                <img className="settings-checkbox" src={getCheckboxIcon(trimIntro)} onClick={() => setTrimIntro((prev: boolean) => !prev)}/>
                             </div></> : null}
                             <div className="settings-row">
                                 <button onClick={deleteCookie} className="cookie-button">Delete Cookies</button>

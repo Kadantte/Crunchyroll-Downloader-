@@ -1,4 +1,4 @@
-import {app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, session, protocol, webContents, components} from "electron"
+import {app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, session, protocol, webContents} from "electron"
 import {autoUpdater} from "electron-updater"
 import windowStateKeeper from "electron-window-state"
 import debounce from "debounce"
@@ -80,6 +80,10 @@ ipcMain.handle("delete-cookies", () => {
   session.defaultSession.clearStorageData()
   store.delete("cookie")
   store.delete("token")
+  store.delete("account-id")
+  store.delete("hidive-cookie")
+  store.delete("hidive-email")
+  store.delete("hidive-password")
 })
 
 ipcMain.handle("get-cookie", () => {
@@ -91,7 +95,7 @@ ipcMain.handle("get-token", () => {
 })
 
 ipcMain.handle("get-account-id", () => {
-  return store.get("account_id", "")
+  return store.get("account-id", "")
 })
 
 ipcMain.handle("get-hidive-cookie", () => {
@@ -460,8 +464,8 @@ ipcMain.handle("download-subtitles", async (event, info) => {
   }
 })
 
-ipcMain.handle("download-ass", async (event, info, ass) => {
-  let output = util.parseDest(info.episode, "ass", info.dest, info.template, null, info.language)
+ipcMain.handle("download-ass", async (event, info, ass, key) => {
+  let output = util.parseDest(info.episode, "ass", info.dest, info.template, null, info.language, key)
   const folder = path.dirname(output)
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recursive: true})
   fs.writeFileSync(output, ass)
@@ -592,7 +596,7 @@ ipcMain.handle("webview-id", async (event, id) => {
         contents.debugger.sendCommand("Network.getResponseBody", {requestId: params.requestId}).then((response) => {
           const body = JSON.parse(response.body)
           store.set("token", body.access_token)
-          if (body.account_id) store.set("account_id", body.account_id)
+          if (body.account_id) store.set("account-id", body.account_id)
         })
       }
     }
@@ -612,8 +616,7 @@ if (!singleLock) {
     }
   })
 
-  app.on("ready", async () => {
-    await components.whenReady()
+  app.on("ready", () => {
     let mainWindowState = windowStateKeeper({file: "main.json", defaultWidth: 800, defaultHeight: 600})
     window = new BrowserWindow({width: mainWindowState.width, height: mainWindowState.height, minWidth: 790, minHeight: 550, frame: false, backgroundColor: "#f97540", center: true, webPreferences: {nodeIntegration: true, contextIsolation: false}})
     window.loadFile(path.join(__dirname, "index.html"))

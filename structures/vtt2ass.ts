@@ -1,3 +1,5 @@
+import functions from "./functions"
+
 const cssPrefixRx = /\.rmp-container>\.rmp-content>\.rmp-cc-area>\.rmp-cc-container>\.rmp-cc-display>\.rmp-cc-cue /g
 
 const colors = {
@@ -155,7 +157,9 @@ const defaultStyleFont = "Arial"
 
 // predefined
 let relGroup = ""
-let fontSize = 0
+let fontSize = 40
+let fontYPosition = 20
+let fontColor = "FFFFFF"
 let tmMrg = 0
 let rFont = ""
 
@@ -177,7 +181,7 @@ type Vtt = {
 function loadCSS(cssStr: string): Css {
   const css = cssStr.replace(cssPrefixRx, "").replace(/[\r\n]+/g, "\n").split("\n")
   const defaultSFont = rFont == "" ? defaultStyleFont : rFont
-  let defaultStyle = `${defaultSFont},40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1,0,2,20,20,20,1` //base for nonDialog
+  let defaultStyle = `${defaultSFont},${fontSize},&H00${fontColor},&H00FF0000,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,20,20,${fontYPosition},1` //base for nonDialog
   const styles: Record<string, {
     params: string,
     list: string[]
@@ -215,7 +219,7 @@ function parseStyle(stylegroup: string, line: string, style: any) {
   const defaultSFont = rFont == "" ? defaultStyleFont : rFont //redeclare cause of let
 
   if (stylegroup.startsWith("Subtitle") || stylegroup.startsWith("Song")) {//base for dialog, everything else use defaultStyle
-    style = `${defaultSFont},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2.6,0,2,20,20,46,1`
+    style = `${defaultSFont},${fontSize},&H00${fontColor},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,2,20,20,${fontYPosition},1`
  }
 
   // Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
@@ -247,7 +251,7 @@ function parseStyle(stylegroup: string, line: string, style: any) {
       cl = getColor(st[1])
       if (cl !== null) {
         if (cl == "&H0000FFFF") {
-          style[2] = style[3] = "&H00FFFFFF"
+          style[2] = style[3] = `&H00${fontColor}`
        }
         else {
           style[2] = style[3] = cl
@@ -539,9 +543,13 @@ function toSubTime(str: string) {
   return n.slice(0, 3).join(":") + "." + n[3]
 }
 
-function vtt(group: string | undefined, xFontSize: number | undefined, vttStr: string, cssStr: string, timeMargin?: number, replaceFont?: string) {
+function vtt(group: string | undefined, xFontSize: number | undefined, vttStr: string, cssStr: string, timeMargin?: number, replaceFont?: string, xFontColor?: string, xFontYPosition?: number) {
+  xFontSize = Number(xFontSize)
+  xFontYPosition = Number(xFontYPosition)
   relGroup = group ?? ""
-  fontSize = xFontSize && xFontSize > 0 ? xFontSize : 34 // 1em to pix
+  fontSize = xFontSize > 0 ? xFontSize : 40
+  fontColor = xFontColor ? functions.reverseRGB(xFontColor.replace("#", "").toUpperCase()) : "FFFFFF"
+  fontYPosition = xFontYPosition && xFontYPosition > 0 ? xFontYPosition : 20
   tmMrg = timeMargin ? timeMargin : 0 //
   rFont = replaceFont ? replaceFont : rFont
   return convert(
@@ -550,4 +558,40 @@ function vtt(group: string | undefined, xFontSize: number | undefined, vttStr: s
   )
 }
 
-export {vtt}
+const editAss = (ass: string, fontSize: number, fontColor: string, fontYPosition: number, mp4Fix?: boolean) => {
+  fontColor = functions.reverseRGB(fontColor.replace("#", "").toUpperCase())
+  fontSize = Number(fontSize) - 20
+  if (fontSize < 0) fontSize = 1
+  const lines = ass.split("\n")
+  const newLines = []
+
+  const keys = ["Name", "Fontname", "Fontsize", "PrimaryColour", "SecondaryColour", 
+                "OutlineColour", "BackColour", "Bold", "Italic", "Underline", "Strikeout", 
+                "ScaleX", "ScaleY", "Spacing", "Angle", "BorderStyle", "Outline", "Shadow", 
+                "Alignment", "MarginL", "MarginR", "MarginV", "Encoding"]
+  for (let i = 0; i < lines.length; i++) {
+      let line = lines[i]
+      if (lines[i].startsWith("Style")) {
+          const values = lines[i].replace("Style: ", "").split(",")
+          let obj = {} as any
+          for (let j = 0; j < values.length; j++) {
+              obj[keys[j]] = values[j]
+          }
+          obj.PrimaryColour = `&H00${fontColor}`
+          if (mp4Fix) {
+            obj.Fontsize = `${fontSize}`
+            obj.Outline = "4"
+          } else {
+            obj.Bold = 0
+          }
+          if (obj.Name === "Default") {
+              obj.MarginV = `00${fontYPosition}`
+          }
+          line = `Style: ${Object.values(obj).join(",")}`
+      }
+      newLines.push(line)
+  }
+  return newLines.join("\n")
+}
+
+export {vtt, editAss}

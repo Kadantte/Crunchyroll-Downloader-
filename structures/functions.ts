@@ -5,7 +5,6 @@ import path from "path"
 export default class functions {
     public static download = async (link: string, dest: string) => {
         const headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36"}
-        console.log(link)
         const bin = await axios.get(link, {responseType: "arraybuffer", headers}).then((r) => r.data)
         fs.writeFileSync(dest, Buffer.from(bin, "binary"))
     }
@@ -60,13 +59,13 @@ export default class functions {
         .replace("https://www.crunchyroll.com/", "https://www.crunchyroll.com/en-gb/")
     }
 
-    public static parseLocale = (locale: string) => {
+    public static parseLocale = (locale: string, hidive?: boolean) => {
         if (locale === "all") return "All"
         if (locale === "jaJP") return "Japanese"
         if (locale === "enUS") return "English"
         if (locale === "enGB") return "English"
-        if (locale === "esES") return "Spanish"
-        if (locale === "esLA") return "Spanish"
+        if (locale === "esES") return hidive ? "Spanish Europe" : "Spanish"
+        if (locale === "esLA") return hidive ? "Spanish LatAm" : "Spanish"
         if (locale === "frFR") return "French"
         if (locale === "deDE") return "German"
         if (locale === "itIT") return "Italian"
@@ -165,5 +164,12 @@ export default class functions {
         if (language === "ptBR") if (portugeuseDialect === "PT") dialect = "ptPT"
         if (dialect === "all") dialect = "enUS"
         return dialect
+    }
+
+    public static reverseRGB = (rgb: string) => {
+        const r = rgb.slice(0, 2)
+        const g = rgb.slice(2, 4)
+        const b = rgb.slice(4, 6)
+        return b + g + r
     }
 }

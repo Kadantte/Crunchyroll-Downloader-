@@ -13,11 +13,13 @@ import searchButtonHI from "../assets/hidive/searchButton.png"
 import searchButtonHoverHI from "../assets/hidive/searchButton-hover.png"
 import ErrorMessage from "./ErrorMessage"
 import "../styles/searchbar.less"
-import {vtt} from "../structures/vtt2ass"
+import {vtt, editAss} from "../structures/vtt2ass"
 import functions from "../structures/functions"
 import HIDIVE from "../structures/hidive"
 import {getKeys} from "../structures/widevine"
-import {TypeContext, QualityContext, CodecContext, FormatContext, LanguageContext, TemplateContext, VideoQualityContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext} from "../renderer"
+import {TypeContext, QualityContext, CodecContext, FormatContext, LanguageContext, TemplateContext, 
+VideoQualityContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext, FontColorContext,
+TrimIntroContext, FontSizeContext, FontYPositionContext} from "../renderer"
 
 const SearchBar: React.FunctionComponent = (props) => {
     const {website, setWebsite} = useContext(WebsiteContext)
@@ -31,6 +33,10 @@ const SearchBar: React.FunctionComponent = (props) => {
     const {spanishDialect} = useContext(SpanishDialectContext)
     const {portugeuseDialect} = useContext(PortugeuseDialectContext)
     const {codec} = useContext(CodecContext)
+    const {fontSize, setFontSize} = useContext(FontSizeContext)
+    const {fontColor, setFontColor} = useContext(FontColorContext)
+    const {fontYPosition, setFontYPosition} = useContext(FontYPositionContext)
+    const {trimIntro, setTrimIntro} = useContext(TrimIntroContext)
     const [id, setID] = useState(1)
     const [directory, setDirectory] = useState("")
     const [folderHover, setFolderHover] = useState(false)
@@ -136,7 +142,7 @@ const SearchBar: React.FunctionComponent = (props) => {
         return stream
     }
 
-    const parseSubtitles = async (info: {id: number, episode: any, dest: string, kind: string}, error?: boolean, noDL?: boolean) => {
+    const parseSubtitles = async (info: {id: number, episode: any, dest: string, kind: string}, error?: boolean, noDL?: boolean, mp4Fix?: boolean) => {
         const meta = info.episode.streams.meta
         let subLang = functions.dashLocale(language)
         let subtitles = [] as string[]
@@ -144,14 +150,20 @@ const SearchBar: React.FunctionComponent = (props) => {
         for (const [key, value] of Object.entries(meta.subtitles)) {
             if (subLang === "all") {
                 subtitleNames.push(functions.dashLocale(key))
-                subtitles.push((value as any).url)
+                const assStr = await fetch((value as any).url).then((r) => r.text())
+                const edited = editAss(assStr, fontSize, fontColor, fontYPosition)
+                const file = await ipcRenderer.invoke("download-ass", info, edited, ` ${functions.dashLocale(key)}`)
+                subtitles.push(file)
             } else if (key === subLang) {
                 subtitleNames.push(functions.dashLocale(key))
-                subtitles.push((value as any).url)
+                const assStr = await fetch((value as any).url).then((r) => r.text())
+                const edited = editAss(assStr, fontSize, fontColor, fontYPosition, mp4Fix)
+                const file = await ipcRenderer.invoke("download-ass", info, edited)
+                subtitles.push(file)
             }
         }
         if (!subtitles?.[0]) return error ? ipcRenderer.invoke("download-error", "search") : {subtitles, subtitleNames}
-        if (!noDL) ipcRenderer.invoke("download-subtitles", {url: subtitles[0], dest: info.dest, id: info.id, episode: info.episode, kind: info.kind, template, language})
+        if (!noDL) ipcRenderer.invoke("download-subtitles", {url: subtitles[0], noSkip: true, dest: info.dest, id: info.id, episode: info.episode, kind: info.kind, template, language})
         return {subtitles, subtitleNames}
     }
 
@@ -239,11 +251,16 @@ const SearchBar: React.FunctionComponent = (props) => {
                     downloaded = true
                     ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, decryptionKey, ...opts})
                 } else {
-                    const playlist = await parsePlaylist(episodes[i])
+                    let {subtitles, subtitleNames} = await parseSubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
+                    if (type === "dub" && language === "jaJP") {
+                        subtitles = null
+                        subtitleNames = null
+                    }
+                    const playlist = await parsePlaylist(episodes[i], true)
                     if (!playlist) continue
                     const decryptionKey = await getDecryptionKey(playlist)
                     downloaded = true
-                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, decryptionKey, ...opts})
+                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, decryptionKey, ...opts})
                     }
                 current += 1
                 setID(prev => prev + 1)
@@ -266,11 +283,16 @@ const SearchBar: React.FunctionComponent = (props) => {
                         return prev + 1
                     })
             } else {
-                const playlist = await parsePlaylist(episode)
+                let {subtitles, subtitleNames} = await parseSubtitles({id: 0, episode: episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
+                if (type === "dub" && language === "jaJP") {
+                    subtitles = null
+                    subtitleNames = null
+                }
+                const playlist = await parsePlaylist(episode, true)
                 if (!playlist) return ipcRenderer.invoke("download-error", "search")
                 const decryptionKey = await getDecryptionKey(playlist)
                 setID((prev) => {
-                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist, decryptionKey, ...opts})
+                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, decryptionKey, ...opts})
                     return prev + 1
                 })
             }
@@ -305,7 +327,8 @@ const SearchBar: React.FunctionComponent = (props) => {
     const parseHIDIVEEpisodes = async (url: string, html?: string) => {
         const cookie = await ipcRenderer.invoke("get-hidive-cookie")
         if (!html) html = await fetch(url, {headers: {cookie}}).then((r) => r.text())
-        const id = html?.match(/(?<=titleID&quot;: )(.*?)(?=,)/)?.[0]
+        let id = html?.match(/(?<=titleID&quot;: )(.*?)(?=,)/)?.[0]
+        if (!id) id = html?.match(/(?<=titleID": )(.*?)(?=,)/)?.[0]
         const hidive = new HIDIVE()
         await hidive.init()
         const response = await hidive.post("GetTitle", {Id: id})
@@ -335,17 +358,18 @@ const SearchBar: React.FunctionComponent = (props) => {
     }
 
     const parseHIDIVESubtitles = async (info: {id: number, episode: any, dest: string, kind: string}, error?: boolean, noDL?: boolean, ass?: boolean) => {
-        let subLang = functions.parseLocale(language)
+        let dialect = functions.getDialect(language, englishDialect, spanishDialect, portugeuseDialect)
+        let subLang = functions.parseLocale(dialect, true)
         let subtitles = [] as string[]
         let subtitleNames = [] as string[]
         for (const [key, value] of Object.entries(info.episode.captions)) {
-            if (subLang === "all") {
+            if (language === "all") {
                 subtitleNames.push(key.replace(" Subs", ""))
                 if (ass) {
                     const vttStr = await fetch(value as any).then((r) => r.text())
                     const cssStr = info.episode.css ? await fetch(info.episode.css).then((r) => r.text()) : ""
-                    const assStr = vtt(undefined, 34, vttStr, cssStr, 0, "Swis721 BT")
-                    const file = await ipcRenderer.invoke("download-ass", info, assStr)
+                    const assStr = vtt(key.replace(" Subs", ""), fontSize, vttStr, cssStr, trimIntro ? 5 : 0, "Helvetica", fontColor, fontYPosition)
+                    const file = await ipcRenderer.invoke("download-ass", info, assStr, ` ${key.replace(" Subs", "")}`)
                     subtitles.push(file)
                 } else {
                     subtitles.push(value as any)
@@ -355,7 +379,7 @@ const SearchBar: React.FunctionComponent = (props) => {
                 if (ass) {
                     const vttStr = await fetch(value as any).then((r) => r.text())
                     const cssStr = info.episode.css ? await fetch(info.episode.css).then((r) => r.text()) : ""
-                    const assStr = vtt(undefined, info.episode.fontSize, vttStr, cssStr)
+                    const assStr = vtt(key.replace(" Subs", ""), fontSize, vttStr, cssStr, trimIntro ? 5 : 0, "Helvetica", fontColor, fontYPosition)
                     const file = await ipcRenderer.invoke("download-ass", info, assStr)
                     subtitles.push(file)
                 } else {
@@ -368,10 +392,44 @@ const SearchBar: React.FunctionComponent = (props) => {
         return {subtitles, subtitleNames}
     }
 
+    const searchHIDIVEEpisodes = async (query: string, html?: string) => {
+        let episodes = null as any
+        let start = null as any
+        let end = null as any
+        if (/\d *- *\d/.test(query)) {
+            let part = query.match(/(?<= )\d(.*?)(?=$)/)?.[0] ?? ""
+            start = Number(part.split("-")[0]) - 1
+            end = Number(part.split("-")[1])
+            query = query.replace(part, "").trim()
+        } else if (/ \d+/.test(query)) {
+            start = Number(query.match(/ \d+/)?.[0]) - 1
+            query = query.replace(String(start + 1), "").trim()
+        }
+        if (/hidive.com/.test(query)) {
+            episodes = await parseHIDIVEEpisodes(query, html)
+        } else {
+            const hidive = new HIDIVE()
+            await hidive.init()
+            const response = await hidive.post("Search", {Query: query})
+            const results = response.Data.TitleResults
+            if (results.length) {
+                const anime = `https://www.hidive.com/tv/${results[0].Name.toLowerCase().replace(/ +/g, "-").replace(/\W/g, "")}`
+                episodes = await parseHIDIVEEpisodes(anime)
+            }
+        }
+        if (start !== null && end !== null) {
+            episodes = episodes.slice(start, end)
+        } else if (start !== null) {
+            episodes = [episodes[start]]
+        }
+        return episodes
+    }
+
     const downloadHIDIVE = async (searchText: string, html?: string) => {
         if (!searchText) return
         const headers = ["Referer: https://www.hidive.com/"]
-        let opts = {resolution: Number(quality), quality: videoQuality, language, template, codec, headers, seek: 5} as any
+        let opts = {resolution: Number(quality), quality: videoQuality, language, template, codec, headers} as any
+        if (trimIntro) opts.seek = 5
         if (type === "sub") opts.preferSub = true
         if (type === "dub") {
             opts.preferSub = false
@@ -384,33 +442,11 @@ const SearchBar: React.FunctionComponent = (props) => {
         if (format === "vtt") opts.subtitles = true
         if (format === "mkv") opts.softSubs = true
         opts.kind = getKind()
-        let episode = null as any //await ipcRenderer.invoke("get-hidive-episode", searchText, opts)
+        let episode = null as any
         if (/hidive/.test(searchText)) episode = await parseHIDIVEEpisode(searchText)
         if (!episode) {
-            let episodes = null as any //await ipcRenderer.invoke("get-hidive-episodes", searchText, opts)
-            if (!episodes) {
-                if (/hidive.com/.test(searchText)) {
-                    let start = null as any
-                    let end = null as any
-                    if (/\d *- *\d/.test(searchText)) {
-                        let part = searchText.match(/(?<= )\d(.*?)(?=$)/)?.[0] ?? ""
-                        start = Number(part.split("-")[0]) - 1
-                        end = Number(part.split("-")[1])
-                        searchText = searchText.replace(part, "").trim()
-                    } else if (/ \d+/.test(searchText)) {
-                        start = Number(searchText.match(/ \d+/)?.[0]) - 1
-                        searchText = searchText.replace(String(start + 1), "").trim()
-                    }
-                    episodes = await parseHIDIVEEpisodes(searchText, html)
-                    if (start !== null && end !== null) {
-                        episodes = episodes.slice(start, end)
-                    } else if (start !== null) {
-                        episodes = [episodes[start]]
-                    }
-                } else {
-                    return ipcRenderer.invoke("download-error", "search")
-                }
-            }
+            let episodes = await searchHIDIVEEpisodes(searchText, html) as any
+            if (!episodes) return ipcRenderer.invoke("download-error", "search")
             let current = id
             let downloaded = false
             for (let i = 0; i < episodes.length; i++) {
@@ -419,13 +455,17 @@ const SearchBar: React.FunctionComponent = (props) => {
                     const subtitles = await parseHIDIVESubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, true, false, format === "ass")
                     if (subtitles) downloaded = true
                 } else if (opts.softSubs) {
-                    const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true)
+                    const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
                     const playlist = await parseHIDIVEPlaylist(episodes[i], true)
                     if (!playlist) continue
                     downloaded = true
                     ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, ...opts})
                 } else {
-                    const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
+                    let {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
+                    if (type === "dub" && language === "jaJP") {
+                        subtitles = null
+                        subtitleNames = null
+                    }
                     const playlist = await parseHIDIVEPlaylist(episodes[i])
                     if (!playlist) continue
                     downloaded = true
@@ -443,7 +483,7 @@ const SearchBar: React.FunctionComponent = (props) => {
                     return prev + 1
                 })
             } else if (opts.softSubs) {
-                    const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: 0, episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true)
+                    const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: 0, episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
                     const playlist = await parseHIDIVEPlaylist(episode, true)
                     if (!playlist) return ipcRenderer.invoke("download-error", "search")
                     setID((prev) => {
@@ -451,7 +491,11 @@ const SearchBar: React.FunctionComponent = (props) => {
                         return prev + 1
                     })
             } else {
-                const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: 0, episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
+                let {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: 0, episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
+                if (type === "dub" && language === "jaJP") {
+                    subtitles = null
+                    subtitleNames = null
+                }
                 const playlist = await parseHIDIVEPlaylist(episode)
                 if (!playlist) return ipcRenderer.invoke("download-error", "search")
                 setID((prev) => {
