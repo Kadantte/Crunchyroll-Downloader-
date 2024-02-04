@@ -106,12 +106,13 @@ const SearchBar: React.FunctionComponent = (props) => {
 
     const parseEpisodes = async (url: string, html?: string) => {
         const cookie = await ipcRenderer.invoke("get-cookie")
-        if (!html) html = await fetch(url, {headers: {cookie}}).then((r) => r.text())
+        const token = await ipcRenderer.invoke("get-token")
+        if (!html) html = await fetch(url, {headers: {cookie, Authorization: `Bearer ${token}`}}).then((r) => r.text())
         let urls = html?.match(/(?<=href="\/)watch\/(.*?)(?=")/gm) as string[]
         urls = functions.removeDuplicates(urls?.map((u: any) => `https://www.crunchyroll.com/${u}`))
         if (!urls?.length) {
             const episodesLink = await ipcRenderer.invoke("get-episodes-link")
-            const episodesJSON = await fetch(episodesLink, {headers: {cookie}}).then((r) => r.json())
+            const episodesJSON = await fetch(episodesLink, {headers: {cookie, Authorization: `Bearer ${token}`}}).then((r) => r.json())
             const region = episodesLink.match(/(?<=\/v2\/)(.*?)(?=\/)/)?.[0]?.toLowerCase()
             urls = [] as string[]
             for (let i = 0; i < episodesJSON.items.length; i++) {
@@ -121,7 +122,8 @@ const SearchBar: React.FunctionComponent = (props) => {
             if (!urls?.length) return ipcRenderer.invoke("download-error", "search")
         }
         let episodes = await Promise.all(urls.map((u: any) => parseEpisode(u)))
-        return episodes.sort((a: any, b: any) => Number(a?.episode_number) > Number(b?.episode_number) ? 1 : -1)
+        return episodes.filter((e) => e?.episode_number !== null)
+               .sort((a: any, b: any) => Number(a?.episode_number) > Number(b?.episode_number) ? 1 : -1)
     }
 
     const parsePlaylist = async (episode: any, noSub?: boolean) => {
@@ -194,6 +196,42 @@ const SearchBar: React.FunctionComponent = (props) => {
             return downloadHIDIVE(searchText)
         }
     }
+
+    const searchCrunchyrollEpisodes = async (query: string, html?: string) => {
+        let episodes = null as any
+        let start = null as any
+        let end = null as any
+        if (/\d *- *\d/.test(query)) {
+            let part = query.match(/(?<= )\d(.*?)(?=$)/)?.[0] ?? ""
+            start = Number(part.split("-")[0]) - 1
+            end = Number(part.split("-")[1])
+            query = query.replace(part, "").trim()
+        } else if (/ \d+/.test(query)) {
+            start = Number(query.match(/ \d+/)?.[0]) - 1
+            query = query.replace(String(start + 1), "").trim()
+        }
+        if (/crunchyroll.com/.test(query)) {
+            episodes = await parseEpisodes(query, html)
+        } else {
+            const cookie = await ipcRenderer.invoke("get-cookie")
+            const token = await ipcRenderer.invoke("get-token")
+            const results = await fetch(`https://www.crunchyroll.com/content/v2/discover/search?q=${query}`, {headers: {cookie, Authorization: `Bearer ${token}`}}).then((r) => r.json())
+            const show = results.data?.[0].items?.[0]
+            if (show) {
+                const url = `https://www.crunchyroll.com/series/${show.id}/${show.slug_title}`
+                await ipcRenderer.invoke("capture-html", url)
+                await functions.timeout(1500)
+                const html = await ipcRenderer.invoke("get-html")
+                episodes = await parseEpisodes(url, html)
+            }
+        }
+        if (start !== null && end !== null) {
+            episodes = episodes.slice(start, end)
+        } else if (start !== null) {
+            episodes = [episodes[start]]
+        }
+        return episodes
+    }
       
     const downloadCrunchyroll = async (searchText: string, html?: string) => {
         if (!searchText) return
@@ -209,33 +247,11 @@ const SearchBar: React.FunctionComponent = (props) => {
         if (format === "ass") opts.subtitles = true
         if (format === "mkv") opts.softSubs = true
         opts.kind = getKind()
-        let episode = await ipcRenderer.invoke("get-episode", searchText, opts)
+        let episode = null as any
         if (/crunchyroll/.test(searchText)) episode = await parseEpisode(searchText)
         if (!episode) {
-            let episodes = await ipcRenderer.invoke("get-episodes", searchText, opts)
-            if (!episodes) {
-                if (/crunchyroll.com/.test(searchText)) {
-                    let start = null as any
-                    let end = null as any
-                    if (/\d *- *\d/.test(searchText)) {
-                        let part = searchText.match(/(?<= )\d(.*?)(?=$)/)?.[0] ?? ""
-                        start = Number(part.split("-")[0]) - 1
-                        end = Number(part.split("-")[1])
-                        searchText = searchText.replace(part, "").trim()
-                    } else if (/ \d+/.test(searchText)) {
-                        start = Number(searchText.match(/ \d+/)?.[0]) - 1
-                        searchText = searchText.replace(String(start + 1), "").trim()
-                    }
-                    episodes = await parseEpisodes(searchText, html)
-                    if (start !== null && end !== null) {
-                        episodes = episodes.slice(start, end)
-                    } else if (start !== null) {
-                        episodes = [episodes[start]]
-                    }
-                } else {
-                    return ipcRenderer.invoke("download-error", "search")
-                }
-            }
+            let episodes = await searchCrunchyrollEpisodes(searchText, html) as any
+            if (!episodes) return ipcRenderer.invoke("download-error", "search")
             let current = id
             let downloaded = false
             for (let i = 0; i < episodes.length; i++) {

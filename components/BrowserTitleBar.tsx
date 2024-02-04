@@ -29,6 +29,7 @@ import homeButtonHoverHI from "../assets/hidive/homeButton-hover.png"
 import downloadButtonHoverHI from "../assets/hidive/downloadButton-hover.png"
 import externalButtonHoverHI from "../assets/hidive/externalButton-hover.png"
 import refreshButtonHoverHI from "../assets/hidive/refreshButton-hover.png"
+import functions from "../structures/functions"
 import "../styles/browsertitlebar.less"
 
 const BrowserTitleBar: React.FunctionComponent = (props) => {
@@ -48,9 +49,18 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             const web = document.getElementById("webview") as any
             web.loadURL(url)
         }
+        const captureHTML = async (event: any, url: string) => {
+            const web = document.getElementById("webview") as any
+            await web.loadURL(url)
+            await functions.timeout(1000)
+            const html = await web.executeJavaScript("document.documentElement.outerHTML")
+            ipcRenderer.invoke("save-html", html)
+        }
         ipcRenderer.on("open-url", openURL)
+        ipcRenderer.on("capture-html", captureHTML)
         return () => {
             ipcRenderer.removeListener("open-url", openURL)
+            ipcRenderer.removeListener("capture-html", captureHTML)
         }
     })
 

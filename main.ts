@@ -137,6 +137,21 @@ const openWebsite = async () => {
   }
 }
 
+ipcMain.handle("capture-html", async (event, url) => {
+  store.set("html", "")
+  await openWebsite()
+  window?.focus()
+  website?.webContents.send("capture-html", url)
+})
+
+ipcMain.handle("save-html", (event, html) => {
+  store.set("html", html)
+})
+
+ipcMain.handle("get-html", async (event) => {
+  return store.get("html", "")
+})
+
 ipcMain.handle("change-site", async (event, site: string) => {
   website?.webContents.send("site-change", site)
   store.set("site", site)
