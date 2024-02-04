@@ -445,7 +445,7 @@ const SearchBar: React.FunctionComponent = (props) => {
         if (!searchText) return
         const headers = ["Referer: https://www.hidive.com/"]
         let opts = {resolution: Number(quality), quality: videoQuality, language, template, codec, headers} as any
-        if (trimIntro) opts.seek = 5
+        if (trimIntro) opts.seek = 6
         if (type === "sub") opts.preferSub = true
         if (type === "dub") {
             opts.preferSub = false
