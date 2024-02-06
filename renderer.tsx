@@ -33,6 +33,9 @@ export const FontSizeContext = React.createContext<any>(null)
 export const FontYPositionContext = React.createContext<any>(null)
 export const FontColorContext = React.createContext<any>(null)
 export const TrimIntroContext = React.createContext<any>(null)
+export const TrimStartContext = React.createContext<any>(null)
+export const DubSubtitlesContext = React.createContext<any>(null)
+export const DubCaptionsContext = React.createContext<any>(null)
 export const CheckboxModeContext = React.createContext<any>(null)
 export const ThemeContext = React.createContext<any>(null)
 
@@ -57,10 +60,16 @@ const App: React.FunctionComponent = () => {
   const [fontColor, setFontColor] = useState("#ffffff")
   const [fontYPosition, setFontYPosition] = useState(20)
   const [trimIntro, setTrimIntro] = useState(true)
+  const [trimStart, setTrimStart] = useState(10)
   const [checkboxMode, setCheckboxMode] = useState(false)
+  const [dubSubtitles, setDubSubtitles] = useState(false)
+  const [dubCaptions, setDubCaptions] = useState(true)
   let [theme, setTheme] = useState("light")
 
   return (
+    <TrimStartContext.Provider value={{trimStart, setTrimStart}}>
+    <DubCaptionsContext.Provider value={{dubCaptions, setDubCaptions}}>
+    <DubSubtitlesContext.Provider value={{dubSubtitles, setDubSubtitles}}>
     <ThemeContext.Provider value={{theme, setTheme}}>
     <CheckboxModeContext.Provider value={{checkboxMode, setCheckboxMode}}>
     <FontYPositionContext.Provider value={{fontYPosition, setFontYPosition}}>
@@ -114,6 +123,9 @@ const App: React.FunctionComponent = () => {
     </FontYPositionContext.Provider>
     </CheckboxModeContext.Provider>
     </ThemeContext.Provider>
+    </DubSubtitlesContext.Provider>
+    </DubCaptionsContext.Provider>
+    </TrimStartContext.Provider>
   )
 }
 

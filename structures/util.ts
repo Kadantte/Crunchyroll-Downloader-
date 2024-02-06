@@ -7,6 +7,7 @@ import util from "util"
 import which from "which"
 import {CrunchyrollAnime, CrunchyrollEpisode, CrunchyrollSeason, DownloadOptions, FFmpegProgress} from "./types"
 import crunchyroll from "crunchyroll.ts"
+import functions from "./functions"
 
 const exec = util.promisify(child_process.exec)
 
@@ -36,7 +37,7 @@ export default class Util {
     }
 
     public static parseDuration = async (file: string, ffmpegPath?: string) => {
-      const command = `"${ffmpegPath ? ffmpegPath : "ffmpeg"}" -i "${file}"`
+      const command = `"${ffmpegPath ? ffmpegPath : "ffmpeg"}" -user_agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0" -i "${file}"`
       const str = await exec(command).then((s: any) => s.stdout).catch((e: any) => e.stderr)
       const tim =  str.match(/(?<=Duration: )(.*?)(?=,)/)?.[0].split(":").map((n: string) => Number(n))
       if (!tim) return 0
@@ -99,12 +100,12 @@ export default class Util {
       return "None"
     }
 
-    private static readonly findQuality = async (episode: CrunchyrollEpisode, quality?: number, stream?: string) => {
+    private static readonly findQuality = async (episode: CrunchyrollEpisode, quality?: number, stream?: string, headers?: any) => {
       if (!quality) quality = 1080
       const found: any[] = []
       const streams = stream ? [stream] : episode.stream_data.streams.map((s) => s.url)
       for (let i = 0; i < streams.length; i++) {
-        const manifest = await axios.get(streams[i]).then((r) => r.data)
+        const manifest = await axios.get(streams[i], {headers}).then((r) => r.data)
         const m3u8 = Util.parsem3u8(manifest)
         if (!m3u8.playlists) return m3u8
         let playlist = m3u8.playlists.find((p: any) => p.attributes.RESOLUTION.height === quality)
@@ -150,7 +151,7 @@ export default class Util {
       if (options.skipConversion) format = "m3u8"
       if (options.softSubs) format = "mkv"
       if (options.codec === "vp8") format = "webm"
-      const playlist = await Util.findQuality(episode, options.resolution, options.playlist)
+      const playlist = await Util.findQuality(episode, options.resolution, options.playlist, options.noHeaders ? {} : functions.headerObj(options.headers))
       if (!playlist) return Promise.reject("can't download this episode (is it premium only?)")
       const uri = playlist.uri ? playlist.uri : options.playlist
       const resolution = playlist.attributes?.RESOLUTION.height ?? 720
@@ -171,23 +172,32 @@ export default class Util {
       } else {
         video.input(uri)
       }
+      video.args("-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0")
       if (options.seek) video.args("-ss", String(options.seek))
       if (options.headers) {
         for (let i = 0; i < options.headers.length; i++) {
           video.args("-headers", options.headers[i])
         }
       }
+      let subShift = 0
+      if (options.audioTrack) {
+        subShift = 1
+        const audio = video.input(options.audioTrack)
+        ffmpegArgs.unshift("-map", "0:v:0", "-map", "1:a:0")
+        audio.args("-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0")
+        if (options.seek) audio.args("-ss", String(options.seek))
+      }
       let assFiles = []
       if (options.softSubs && options.subtitles) {
         ffmpegArgs.unshift("-map", "0", "-dn", "-map", "-0:s", "-map", "-0:d")
         for (let i = 0; i < options.subtitles.length; i++) {
           video.input(options.subtitles[i])
-          ffmpegArgs.push("-map", `${i + 1}:0`)
+          ffmpegArgs.push("-map", `${i+1+subShift}:0`)
           if (options.subtitleNames?.[i]) ffmpegArgs.push(`-metadata:s:s:${i}`, `title=${options.subtitleNames[i]}`)
           if (!options.subtitles[i].includes("http")) assFiles.push(options.subtitles[i])
         }
       } else if (options.subtitles?.length) {
-        ffmpegArgs.unshift("-vf", `ass=${options.subtitles[0]}`)
+        ffmpegArgs.unshift("-vf", `ass=${options.subtitles[0].replaceAll(",", "\\,")}`)
         video.input(options.subtitles[0])
         if (!options.subtitles[0].includes("http")) assFiles.push(options.subtitles[0])
       }

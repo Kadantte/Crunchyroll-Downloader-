@@ -84,6 +84,9 @@ ipcMain.handle("delete-cookies", () => {
   store.delete("hidive-cookie")
   store.delete("hidive-email")
   store.delete("hidive-password")
+  store.delete("funimation-cookie")
+  store.delete("funimation-token")
+  store.delete("funimation-region")
 })
 
 ipcMain.handle("get-cookie", () => {
@@ -108,6 +111,22 @@ ipcMain.handle("get-hidive-email", () => {
 
 ipcMain.handle("get-hidive-password", () => {
   return store.get("hidive-password", "")
+})
+
+ipcMain.handle("get-funimation-cookie", () => {
+  return store.get("funimation-cookie", "")
+})
+
+ipcMain.handle("get-funimation-token", () => {
+  return store.get("funimation-token", "")
+})
+
+ipcMain.handle("get-funimation-region", () => {
+  return store.get("funimation-region", "US")
+})
+
+ipcMain.handle("get-funimation-cloudfront", () => {
+  return store.get("funimation-cloudfront", "")
 })
 
 ipcMain.handle("object-url", (event, data: any) => {
@@ -447,12 +466,13 @@ const downloadSubtitles = async (info: any) => {
   if (qIndex !== -1) queue[qIndex].started = true
   let format = "ass"
   if (info.vtt) format = "vtt"
+  if (info.srt) format = "srt"
   let output = util.parseDest(info.episode, format, info.dest, info.template, null, info.language)
   const folder = path.dirname(output)
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recursive: true})
   history.push({id: info.id, dest: output})
   active.push({id: info.id, dest: output, action: null})
-  window?.webContents.send("download-started", {id: info.id, episode: info.episode, format: "ass", kind: info.kind})
+  window?.webContents.send("download-started", {id: info.id, episode: info.episode, format, kind: info.kind})
   await functions.timeout(100)
   if (fs.existsSync(output)) {
     window?.webContents.send("download-ended", {id: info.id, output, skipped: info.noSkip ? false : true})
@@ -467,6 +487,7 @@ const downloadSubtitles = async (info: any) => {
 ipcMain.handle("download-subtitles", async (event, info) => {
   let format = "ass"
   if (info.vtt) format = "vtt"
+  if (info.srt) format = "srt"
   window?.webContents.send("download-waiting", {id: info.id, kind: info.kind, episode: info.episode, format})
   queue.push({info, started: false, format})
   const settings = store.get("settings", {}) as any
@@ -610,6 +631,10 @@ ipcMain.handle("webview-id", async (event, id) => {
         store.set("hidive-cookie", cookie)
         saveHIDIVECookie()
       }
+      if (params.headers[":path"] === "/" && params.headers["referer"] === "https://www.funimation.com/") {
+        let cookie = params.headers.cookie
+        store.set("funimation-cookie", cookie)
+      }
     }
     if (method === "Network.requestWillBeSent") {
       if (params.request.method === "POST" && params.request.headers["Referer"] === "https://www.hidive.com/account/login") {
@@ -631,6 +656,17 @@ ipcMain.handle("webview-id", async (event, id) => {
           store.set("token", body.access_token)
           if (body.account_id) store.set("account-id", body.account_id)
         })
+      }
+      if (params.response.url === "https://prod-api-funimationnow.dadcdigital.com/api/auth/login/") {
+        contents.debugger.sendCommand("Network.getResponseBody", {requestId: params.requestId}).then((response) => {
+          const body = JSON.parse(response.body)
+          store.set("funimation-token", body.token)
+          store.set("funimation-region", body.user_region)
+        })
+      }
+      if (params.response.url.includes("cloudfront.net") && params.response.url.includes("Funimation")) {
+        const cloudfront = params.response.url.match(/(?<=\/\/)(.*?)(?=\.)/)?.[0]
+        store.set("funimation-cloudfront", cloudfront)
       }
     }
   })

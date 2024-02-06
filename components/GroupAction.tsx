@@ -25,6 +25,18 @@ import deleteAllButtonDarkHI from "../assets/hidive/deleteAll-dark.png"
 import deleteAllButtonDarkHoverHI from "../assets/hidive/deleteAll-dark-hover.png"
 import stopAllButtonDarkHI from "../assets/hidive/stopAll-dark.png"
 import stopAllButtonDarkHoverHI from "../assets/hidive/stopAll-dark-hover.png"
+import clearAllButtonHoverFU from "../assets/funimation/clearFinished-hover.png"
+import clearAllButtonFU from "../assets/funimation/clearFinished.png"
+import deleteAllButtonFU from "../assets/funimation/deleteAll.png"
+import deleteAllButtonHoverFU from "../assets/funimation/deleteAll-hover.png"
+import stopAllButtonFU from "../assets/funimation/stopAll.png"
+import stopAllButtonHoverFU from "../assets/funimation/stopAll-hover.png"
+import clearAllButtonDarkHoverFU from "../assets/funimation/clearFinished-dark-hover.png"
+import clearAllButtonDarkFU from "../assets/funimation/clearFinished-dark.png"
+import deleteAllButtonDarkFU from "../assets/funimation/deleteAll-dark.png"
+import deleteAllButtonDarkHoverFU from "../assets/funimation/deleteAll-dark-hover.png"
+import stopAllButtonDarkFU from "../assets/funimation/stopAll-dark.png"
+import stopAllButtonDarkHoverFU from "../assets/funimation/stopAll-dark-hover.png"
 import {ClearAllContext} from "../renderer"
 import "../styles/groupaction.less"
 
@@ -98,6 +110,26 @@ const GroupAction: React.FunctionComponent = (props) => {
                     return deleteHover ? deleteAllButtonHoverHI : deleteAllButtonHI
                 } else {
                     return deleteHover ? deleteAllButtonDarkHoverHI : deleteAllButtonDarkHI
+                }
+            }
+        } else if (website === "funimation") {
+            if (type === "clear") {
+                if (color === "light") {
+                    return clearHover ? clearAllButtonHoverFU : clearAllButtonFU
+                } else {
+                    return clearHover ? clearAllButtonDarkHoverFU : clearAllButtonDarkFU
+                }
+            } else if (type === "stop") {
+                if (color === "light") {
+                    return stopHover ? stopAllButtonHoverFU : stopAllButtonFU
+                } else {
+                    return stopHover ? stopAllButtonDarkHoverFU : stopAllButtonDarkFU
+                }
+            } else if (type === "delete") {
+                if (color === "light") {
+                    return deleteHover ? deleteAllButtonHoverFU : deleteAllButtonFU
+                } else {
+                    return deleteHover ? deleteAllButtonDarkHoverFU : deleteAllButtonDarkFU
                 }
             }
         }

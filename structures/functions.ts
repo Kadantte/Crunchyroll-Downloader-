@@ -172,4 +172,19 @@ export default class functions {
         const b = rgb.slice(4, 6)
         return b + g + r
     }
+
+    public static headerObj = (headers?: string[]) => {
+        if (!headers?.length) return {}
+        let obj = {} as any
+        for (let i = 0; i < headers.length; i++) {
+            const split = headers[i].split(":")
+            obj[split[0]] = split[1].trim()
+        }
+        return obj
+    }
+
+    public static convertSeconds = (time: string) => {
+        if (!time.includes(":")) return +time
+        return +time.split(":").reduce((acc: string, time: string) => (60 * +acc) + +time as any)
+    }
 }

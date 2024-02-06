@@ -8,42 +8,63 @@ import maximizeButtonCR from "../assets/crunchyroll/maximizeButton.png"
 import maximizeButtonHoverCR from "../assets/crunchyroll/maximizeButton-hover.png"
 import closeButtonCR from "../assets/crunchyroll/closeButton.png"
 import closeButtonHoverCR from "../assets/crunchyroll/closeButton-hover.png"
-import minimizeButtonHI from "../assets/hidive/minimizeButton.png"
-import minimizeButtonHoverHI from "../assets/hidive/minimizeButton-hover.png"
-import maximizeButtonHI from "../assets/hidive/maximizeButton.png"
-import maximizeButtonHoverHI from "../assets/hidive/maximizeButton-hover.png"
-import closeButtonHI from "../assets/hidive/closeButton.png"
-import closeButtonHoverHI from "../assets/hidive/closeButton-hover.png"
 import reloadButtonCR from "../assets/crunchyroll/reloadButton.png"
 import reloadButtonHoverCR from "../assets/crunchyroll/reloadButton-hover.png"
 import starButtonCR from "../assets/crunchyroll/starButton.png"
 import starButtonHoverCR from "../assets/crunchyroll/starButton-hover.png"
 import loginButtonCR from "../assets/crunchyroll/loginButton.png"
 import loginButtonHoverCR from "../assets/crunchyroll/loginButton-hover.png"
+import settingsButtonHoverCR from "../assets/crunchyroll/settingsButton-hover.png"
+import settingsButtonCR from "../assets/crunchyroll/settingsButton.png"
+import lightButtonCR from "../assets/crunchyroll/light.png"
+import lightButtonHoverCR from "../assets/crunchyroll/light-hover.png"
+import darkButtonCR from "../assets/crunchyroll/dark.png"
+import darkButtonHoverCR from "../assets/crunchyroll/dark-hover.png"
+import minimizeButtonHI from "../assets/hidive/minimizeButton.png"
+import minimizeButtonHoverHI from "../assets/hidive/minimizeButton-hover.png"
+import maximizeButtonHI from "../assets/hidive/maximizeButton.png"
+import maximizeButtonHoverHI from "../assets/hidive/maximizeButton-hover.png"
+import closeButtonHI from "../assets/hidive/closeButton.png"
+import closeButtonHoverHI from "../assets/hidive/closeButton-hover.png"
 import reloadButtonHI from "../assets/hidive/reloadButton.png"
 import reloadButtonHoverHI from "../assets/hidive/reloadButton-hover.png"
 import starButtonHI from "../assets/hidive/starButton.png"
 import starButtonHoverHI from "../assets/hidive/starButton-hover.png"
 import loginButtonHI from "../assets/hidive/loginButton.png"
 import loginButtonHoverHI from "../assets/hidive/loginButton-hover.png"
-import settingsButtonHoverCR from "../assets/crunchyroll/settingsButton-hover.png"
-import settingsButtonCR from "../assets/crunchyroll/settingsButton.png"
 import settingsButtonHoverHI from "../assets/hidive/settingsButton-hover.png"
 import settingsButtonHI from "../assets/hidive/settingsButton.png"
-import crIcon from "../assets/icon.png"
-import hiIcon from "../assets/hidive/icon.png"
-import lightButtonCR from "../assets/crunchyroll/light.png"
-import lightButtonHoverCR from "../assets/crunchyroll/light-hover.png"
-import darkButtonCR from "../assets/crunchyroll/dark.png"
-import darkButtonHoverCR from "../assets/crunchyroll/dark-hover.png"
 import lightButtonHI from "../assets/hidive/light.png"
 import lightButtonHoverHI from "../assets/hidive/light-hover.png"
 import darkButtonHI from "../assets/hidive/dark.png"
 import darkButtonHoverHI from "../assets/hidive/dark-hover.png"
+import minimizeButtonFU from "../assets/funimation/minimizeButton.png"
+import minimizeButtonHoverFU from "../assets/funimation/minimizeButton-hover.png"
+import maximizeButtonFU from "../assets/funimation/maximizeButton.png"
+import maximizeButtonHoverFU from "../assets/funimation/maximizeButton-hover.png"
+import closeButtonFU from "../assets/funimation/closeButton.png"
+import closeButtonHoverFU from "../assets/funimation/closeButton-hover.png"
+import reloadButtonFU from "../assets/funimation/reloadButton.png"
+import reloadButtonHoverFU from "../assets/funimation/reloadButton-hover.png"
+import starButtonFU from "../assets/funimation/starButton.png"
+import starButtonHoverFU from "../assets/funimation/starButton-hover.png"
+import loginButtonFU from "../assets/funimation/loginButton.png"
+import loginButtonHoverFU from "../assets/funimation/loginButton-hover.png"
+import settingsButtonHoverFU from "../assets/funimation/settingsButton-hover.png"
+import settingsButtonFU from "../assets/funimation/settingsButton.png"
+import lightButtonFU from "../assets/funimation/light.png"
+import lightButtonHoverFU from "../assets/funimation/light-hover.png"
+import darkButtonFU from "../assets/funimation/dark.png"
+import darkButtonHoverFU from "../assets/funimation/dark-hover.png"
+import crIcon from "../assets/icon.png"
+import hiIcon from "../assets/hidive/icon.png"
+import fuIcon from "../assets/funimation/icon.png"
 import cr from "../assets/crunchyroll/CR.png"
 import crHover from "../assets/crunchyroll/CR-hover.png"
 import hi from "../assets/hidive/HI.png"
 import hiHover from "../assets/hidive/HI-hover.png"
+import fu from "../assets/funimation/FU.png"
+import fuHover from "../assets/funimation/FU-hover.png"
 import pack from "../package.json"
 import "../styles/titlebar.less"
 
@@ -116,6 +137,10 @@ const TitleBar: React.FunctionComponent = (props) => {
             changeTheme(theme, "hidive")
             ipcRenderer.invoke("change-site", "hidive")
         } else if (website === "hidive") {
+            setWebsite("funimation")
+            changeTheme(theme, "funimation")
+            ipcRenderer.invoke("change-site", "funimation")
+        } else if (website === "funimation") {
             setWebsite("crunchyroll")
             changeTheme(theme, "crunchyroll")
             ipcRenderer.invoke("change-site", "crunchyroll")
@@ -126,6 +151,7 @@ const TitleBar: React.FunctionComponent = (props) => {
         let isDark = value !== undefined ? value === "dark" : theme === "light"
         let isCrunchyroll = websiteValue !== undefined ? websiteValue === "crunchyroll" : website === "crunchyroll"
         let isHiDive = websiteValue !== undefined ? websiteValue === "hidive" : website === "hidive"
+        let isFunimation = websiteValue !== undefined ? websiteValue === "funimation" : website === "funimation"
         if (isDark) {
             if (isCrunchyroll) {
                 document.documentElement.style.setProperty("--bg-color", "#090409")
@@ -175,6 +201,30 @@ const TitleBar: React.FunctionComponent = (props) => {
                 document.documentElement.style.setProperty("--version-reject", "#090409")
                 document.documentElement.style.setProperty("--version-reject-text", "#4842ff")
                 document.documentElement.style.setProperty("--cookie-button", "#2631fe")
+            } else if (isFunimation) {
+                document.documentElement.style.setProperty("--bg-color", "#090409")
+                document.documentElement.style.setProperty("--title-color", "#090409")
+                document.documentElement.style.setProperty("--text-color", "#6528ff")
+                document.documentElement.style.setProperty("--search-color", "#090409")
+                document.documentElement.style.setProperty("--search-text", "#5825ff")
+                document.documentElement.style.setProperty("--drop-color", "#090409")
+                document.documentElement.style.setProperty("--drop-border", "#4d11ff")
+                document.documentElement.style.setProperty("--drop-hover", "#090409")
+                document.documentElement.style.setProperty("--drop-text", "#5411ff")
+                document.documentElement.style.setProperty("--drop-text-hover", "white")
+                document.documentElement.style.setProperty("--settings-color", "#090409")
+                document.documentElement.style.setProperty("--settings-text", "#6d3efa")
+                document.documentElement.style.setProperty("--version-color", "#090409")
+                document.documentElement.style.setProperty("--version-text", "#5b3aff")
+                document.documentElement.style.setProperty("--settings-ok", "#090409")
+                document.documentElement.style.setProperty("--settings-ok-text", "#4935ff")
+                document.documentElement.style.setProperty("--settings-revert", "#090409")
+                document.documentElement.style.setProperty("--settings-revert-text", "#623bf0")
+                document.documentElement.style.setProperty("--version-accept", "#090409")
+                document.documentElement.style.setProperty("--version-accept-text", "#5242ff")
+                document.documentElement.style.setProperty("--version-reject", "#090409")
+                document.documentElement.style.setProperty("--version-reject-text", "#9142ff")
+                document.documentElement.style.setProperty("--cookie-button", "#6e26fe")
             }
             setTheme("dark")
             ipcRenderer.invoke("save-theme", "dark")
@@ -229,6 +279,31 @@ const TitleBar: React.FunctionComponent = (props) => {
                 document.documentElement.style.setProperty("--version-reject", "#8a42ff")
                 document.documentElement.style.setProperty("--version-reject-text", "black")
                 document.documentElement.style.setProperty("--cookie-button", "#2631fe")
+            } else if (isFunimation) {
+                document.documentElement.style.setProperty("--selection-color", "#b070ff")
+                document.documentElement.style.setProperty("--bg-color", "#5425e0")
+                document.documentElement.style.setProperty("--title-color", "#4c24e0")
+                document.documentElement.style.setProperty("--text-color", "black")
+                document.documentElement.style.setProperty("--search-color", "#5025ff")
+                document.documentElement.style.setProperty("--search-text", "black")
+                document.documentElement.style.setProperty("--drop-color", "#662eff")
+                document.documentElement.style.setProperty("--drop-border", "#5e30f7")
+                document.documentElement.style.setProperty("--drop-hover", "#6d3cff")
+                document.documentElement.style.setProperty("--drop-text", "white")
+                document.documentElement.style.setProperty("--drop-text-hover", "black")
+                document.documentElement.style.setProperty("--settings-color", "#673efa")
+                document.documentElement.style.setProperty("--settings-text", "black")
+                document.documentElement.style.setProperty("--version-color", "#653aff")
+                document.documentElement.style.setProperty("--version-text", "black")
+                document.documentElement.style.setProperty("--settings-ok", "#5a35ff")
+                document.documentElement.style.setProperty("--settings-ok-text", "black")
+                document.documentElement.style.setProperty("--settings-revert", "#a83bf0")
+                document.documentElement.style.setProperty("--settings-revert-text", "black")
+                document.documentElement.style.setProperty("--version-accept", "#7442ff")
+                document.documentElement.style.setProperty("--version-accept-text", "black")
+                document.documentElement.style.setProperty("--version-reject", "#ad42ff")
+                document.documentElement.style.setProperty("--version-reject-text", "black")
+                document.documentElement.style.setProperty("--cookie-button", "#5826fe")
             }
             setTheme("light")
             ipcRenderer.invoke("save-theme", "light")
@@ -241,6 +316,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverSite ? crHover : cr
         } else if (website === "hidive") {
             return hoverSite ? hiHover : hi
+        } else if (website === "funimation") {
+            return hoverSite ? fuHover : fu
         }
     }
 
@@ -249,6 +326,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverTheme ? (theme === "light" ? darkButtonHoverCR : lightButtonHoverCR) : (theme === "light" ? darkButtonCR : lightButtonCR)
         } else if (website === "hidive") {
             return hoverTheme ? (theme === "light" ? darkButtonHoverHI : lightButtonHoverHI) : (theme === "light" ? darkButtonHI : lightButtonHI)
+        } else if (website === "funimation") {
+            return hoverTheme ? (theme === "light" ? darkButtonHoverFU : lightButtonHoverFU) : (theme === "light" ? darkButtonFU : lightButtonFU)
         }
     }
 
@@ -257,6 +336,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverSettings ? settingsButtonHoverCR : settingsButtonCR
         } else if (website === "hidive") {
             return hoverSettings ? settingsButtonHoverHI : settingsButtonHI
+        } else if (website === "funimation") {
+            return hoverSettings ? settingsButtonHoverFU : settingsButtonFU
         }
     }
 
@@ -265,6 +346,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverWeb ? loginButtonHoverCR : loginButtonCR
         } else if (website === "hidive") {
             return hoverWeb ? loginButtonHoverHI : loginButtonHI
+        } else if (website === "funimation") {
+            return hoverWeb ? loginButtonHoverFU : loginButtonFU
         }
     }
 
@@ -273,6 +356,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverStar ? starButtonHoverCR : starButtonCR
         } else if (website === "hidive") {
             return hoverStar ? starButtonHoverHI : starButtonHI
+        } else if (website === "funimation") {
+            return hoverStar ? starButtonHoverFU : starButtonFU
         }
     }
 
@@ -281,6 +366,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverReload ? reloadButtonHoverCR : reloadButtonCR
         } else if (website === "hidive") {
             return hoverReload ? reloadButtonHoverHI : reloadButtonHI
+        } else if (website === "funimation") {
+            return hoverReload ? reloadButtonHoverFU : reloadButtonFU
         }
     }
 
@@ -289,6 +376,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverMin ? minimizeButtonHoverCR : minimizeButtonCR
         } else if (website === "hidive") {
             return hoverMin ? minimizeButtonHoverHI : minimizeButtonHI
+        } else if (website === "funimation") {
+            return hoverMin ? minimizeButtonHoverFU : minimizeButtonFU
         }
     }
 
@@ -297,6 +386,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverMax ? maximizeButtonHoverCR : maximizeButtonCR
         } else if (website === "hidive") {
             return hoverMax ? maximizeButtonHoverHI : maximizeButtonHI
+        } else if (website === "funimation") {
+            return hoverMax ? maximizeButtonHoverFU : maximizeButtonFU
         }
     }
 
@@ -305,6 +396,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return hoverClose ? closeButtonHoverCR: closeButtonCR
         } else if (website === "hidive") {
             return hoverClose ? closeButtonHoverHI : closeButtonHI
+        } else if (website === "funimation") {
+            return hoverClose ? closeButtonHoverFU : closeButtonFU
         }
     }
 
@@ -313,6 +406,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return "Crunchyroll Downloader"
         } else if (website === "hidive") {
             return "HIDIVE Downloader"
+        } else if (website === "funimation") {
+            return "Funimation Downloader"
         }
     }
 
@@ -321,6 +416,8 @@ const TitleBar: React.FunctionComponent = (props) => {
             return crIcon
         } else if (website === "hidive") {
             return hiIcon
+        } else if (website === "funimation") {
+            return fuIcon
         }
     }
 

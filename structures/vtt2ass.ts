@@ -162,6 +162,7 @@ let fontYPosition = 20
 let fontColor = "FFFFFF"
 let tmMrg = 0
 let rFont = ""
+let funimationFix = false
 
 type Css = Record<string, {
   params: string
@@ -463,7 +464,11 @@ function convertLine(css: Record<string, string>, l: Record<any, any>) {
   let type = txt.style.match(/Caption/i) ? "caption" : (txt.style.match(/SongCap/i) ? "song_cap" : "subtitle")
   type = type == "caption" && l.time.ext?.position !== undefined ? "capt_pos" : type
   if (l.time.ext?.align === "left") {
-    txt.text = `{\\an7}${txt.text}`
+    if (funimationFix) {
+      txt.text = `${txt.text}`
+    } else {
+      txt.text = `{\\an7}${txt.text}`
+    }
  }
   let ind = "", subInd = 1
   const sMinus = 0 // (19.2 * 2)
@@ -472,12 +477,16 @@ function convertLine(css: Record<string, string>, l: Record<any, any>) {
     const PosX = pos < 0 ? (1280 / 100 * (100 - pos)) : ((1280 - sMinus) / 100 * pos)
     const line = parseInt(l.time.ext.line) || 0
     const PosY = line < 0 ? (720 / 100 * (100 - line)) : ((720 - sMinus) / 100 * line)
+    if (funimationFix) {} else {
     txt.text = `{\\pos(${parseFloat(PosX.toFixed(3))},${parseFloat(PosY.toFixed(3))})}${txt.text}`
+    }
  }
   else if (l.time.ext?.line !== undefined && type == "caption") {
     const line = parseInt(l.time.ext.line)
     const PosY = line < 0 ? (720 / 100 * (100 - line)) : ((720 - sMinus) / 100 * line)
+    if (funimationFix) {} else {
     txt.text = `{\\pos(640,${parseFloat(PosY.toFixed(3))})}${txt.text}`
+    }
  }
   else {
     const indregx = txt.style.match(/(.*)_(\d+)$/)
@@ -543,7 +552,7 @@ function toSubTime(str: string) {
   return n.slice(0, 3).join(":") + "." + n[3]
 }
 
-function vtt(group: string | undefined, xFontSize: number | undefined, vttStr: string, cssStr: string, timeMargin?: number, replaceFont?: string, xFontColor?: string, xFontYPosition?: number) {
+function vtt(group: string | undefined, xFontSize: number | undefined, vttStr: string, cssStr: string, timeMargin?: number, replaceFont?: string, xFontColor?: string, xFontYPosition?: number, xFunimationFix?: boolean) {
   xFontSize = Number(xFontSize)
   xFontYPosition = Number(xFontYPosition)
   relGroup = group ?? ""
@@ -552,6 +561,7 @@ function vtt(group: string | undefined, xFontSize: number | undefined, vttStr: s
   fontYPosition = xFontYPosition && xFontYPosition > 0 ? xFontYPosition : 20
   tmMrg = timeMargin ? timeMargin : 0 //
   rFont = replaceFont ? replaceFont : rFont
+  funimationFix = xFunimationFix || false
   return convert(
     loadCSS(cssStr),
     loadVTT(vttStr)

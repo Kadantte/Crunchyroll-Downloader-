@@ -11,6 +11,7 @@ import m3u8Label from "../assets/crunchyroll/m3u8Label.png"
 import pngLabel from "../assets/crunchyroll/pngLabel.png"
 import assLabel from "../assets/crunchyroll/assLabel.png"
 import vttLabel from "../assets/hidive/vttLabel.png"
+import srtLabel from "../assets/funimation/srtLabel.png"
 import mkvLabel from "../assets/crunchyroll/mkvLabel.png"
 import webmLabel from "../assets/crunchyroll/webmLabel.png"
 import closeContainerCR from "../assets/crunchyroll/closeContainer.png"
@@ -41,6 +42,20 @@ import trashButtonHI from "../assets/hidive/trashButton.png"
 import trashButtonHoverHI from "../assets/hidive/trashButton-hover.png"
 import playVideoHI from "../assets/hidive/playVideo.png"
 import playVideoHoverHI from "../assets/hidive/playVideo-hover.png"
+import closeContainerFU from "../assets/funimation/closeContainer.png"
+import closeContainerHoverFU from "../assets/funimation/closeContainer-hover.png"
+import pauseButtonFU from "../assets/funimation/pauseButton.png"
+import pauseButtonHoverFU from "../assets/funimation/pauseButton-hover.png"
+import playButtonFU from "../assets/funimation/playButton.png"
+import playButtonHoverFU from "../assets/funimation/playButton-hover.png"
+import stopButtonFU from "../assets/funimation/stopButton.png"
+import stopButtonHoverFU from "../assets/funimation/stopButton-hover.png"
+import locationButtonFU from "../assets/funimation/locationButton.png"
+import locationButtonHoverFU from "../assets/funimation/locationButton-hover.png"
+import trashButtonFU from "../assets/funimation/trashButton.png"
+import trashButtonHoverFU from "../assets/funimation/trashButton-hover.png"
+import playVideoFU from "../assets/funimation/playVideo.png"
+import playVideoHoverFU from "../assets/funimation/playVideo-hover.png"
 import pSBC from "shade-blend-color"
 import "../styles/episodecontainer.less"
 
@@ -73,6 +88,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
     const [progressColor, setProgressColor] = useState("")
     const [backgroundColorCR, setBackgroundColorCR] = useState("")
     const [backgroundColorHI, setBackgroundColorHI] = useState("")
+    const [backgroundColorFU, setBackgroundColorFU] = useState("")
     const [clearSignal, setClearSignal] = useState(false)
     const [stopSignal, setStopSignal] = useState(false)
     const [deleteSignal, setDeleteSignal] = useState(false)
@@ -188,6 +204,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
     const updateBackgroundColor = async () => {
         let colorsCR = ["#f6642c", "#f6432c", "#f62c55", "#2c79f6", "#f62c98", "#f62c4a", "#2c69f6"]
         let colorsHI = ["#2c48f6", "#322cf6", "#2c32f6", "#5310fe", "#1f93ff", "#1f64ff", "#2040ff"]
+        let colorsFU = ["#4c2cf6", "#6d2cf6", "#2c36f6", "#582cf6", "#9024ff", "#5539ff", "#612cf6"]
         const container = episodeContainerRef.current?.querySelector(".episode-container") as HTMLElement
         if (!container) return
         if (!backgroundColorCR) {
@@ -197,6 +214,10 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
         if (!backgroundColorHI) {
             const colorHI = colorsHI[Math.floor(Math.random() * colorsHI.length)]
             setBackgroundColorHI(colorHI)
+        }
+        if (!backgroundColorFU) {
+            const colorFU = colorsFU[Math.floor(Math.random() * colorsFU.length)]
+            setBackgroundColorFU(colorFU)
         }
         const theme = await ipcRenderer.invoke("get-theme")
         if (theme === "light") {
@@ -210,6 +231,9 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             } else if (website === "hidive") {
                 container.style.backgroundColor = backgroundColorHI
                 container.style.border = `2px solid ${pSBC(0.4, backgroundColorHI)}`
+            } else if (website === "funimation") {
+                container.style.backgroundColor = backgroundColorHI
+                container.style.border = `2px solid ${pSBC(0.4, backgroundColorFU)}`
             }
         } else {
             const text = episodeContainerRef.current?.querySelectorAll(".ep-text, .ep-text-alt") as NodeListOf<HTMLElement>
@@ -221,6 +245,10 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
                 text.forEach((t) => {
                     t.style.color = backgroundColorHI
                 })
+            } else if (website === "funimation") {
+                text.forEach((t) => {
+                    t.style.color = backgroundColorFU
+                })
             }
             container.style.backgroundColor = "#090409"
             container.style.border = `2px solid #090409`
@@ -230,6 +258,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
     const updateProgressColor = () => {
         let colors = ["#214dff", "#ff2ba7", "#ff2942", "#ff2994", "#c229ff", "#5b29ff", "#29b1ff", "#ff8d29"]
         if (website === "hidive") colors = ["#25aaff", "#4425ff", "#4425ff", "#0d7fff", "#282dff", "#30ccff", "#3136ff"]
+        if (website === "funimation") colors = ["#6815ff", "#dc18ff", "#3b27ff", "#9d12ff", "#6c13ff", "#ff19f7", "#3419ff"]
         const progressBar = progressBarRef.current?.querySelector(".progress-bar") as HTMLElement
         if (progress < 0 && !output) {
              setProgressColor("#573dff")
@@ -284,6 +313,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             document.documentElement.style.setProperty("--selection-color", pSBC(0.5, backgroundColorCR))
         } else if (website === "hidive") {
             document.documentElement.style.setProperty("--selection-color", pSBC(0.5, backgroundColorHI))
+        } else if (website === "funimation") {
+            document.documentElement.style.setProperty("--selection-color", pSBC(0.5, backgroundColorFU))
         }
     }
 
@@ -300,6 +331,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
         if (props.format === "m3u8") return m3u8Label
         if (props.format === "ass") return assLabel
         if (props.format === "vtt") return vttLabel
+        if (props.format === "srt") return srtLabel
         if (props.format === "png") return pngLabel
     }
 
@@ -315,6 +347,9 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             anime = `https://crunchyroll.com/series/${id}`
         } else if (website === "hidive") {
             anime = `https://www.hidive.com/tv/${props.episode.series_name.toLowerCase().replace(/ +/g, "-").replace(/[^a-z0-9-]/gi, "")}`
+        } else if (website === "funimation") {
+            const slug = url.match(/(?<=v\/)(.*?)(?=\/)/)?.[0]
+            anime = `https://www.funimation.com/shows/${slug}/`
         }
         ipcRenderer.invoke("open-url", anime)
     }
@@ -324,6 +359,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             return hoverVideo ? playVideoHoverCR : playVideoCR
         } else if (website === "hidive") {
             return hoverVideo ? playVideoHoverHI : playVideoHI
+        } else if (website === "funimation") {
+            return hoverVideo ? playVideoHoverFU : playVideoFU
         }
     }
 
@@ -332,6 +369,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             return hoverClose ? closeContainerHoverCR : closeContainerCR
         } else if (website === "hidive") {
             return hoverClose ? closeContainerHoverHI : closeContainerHI
+        } else if (website === "funimation") {
+            return hoverClose ? closeContainerHoverFU : closeContainerFU
         }
     }
 
@@ -340,6 +379,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             return hoverPlay ? playButtonHoverCR : playButtonCR
         } else if (website === "hidive") {
             return hoverPlay ? playButtonHoverHI : playButtonHI
+        } else if (website === "funimation") {
+            return hoverPlay ? playButtonHoverFU : playButtonFU
         }
     }
 
@@ -348,6 +389,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             return hoverPause ? pauseButtonHoverCR : pauseButtonCR
         } else if (website === "hidive") {
             return hoverPause ? pauseButtonHoverHI : pauseButtonHI
+        } else if (website === "funimation") {
+            return hoverPause ? pauseButtonHoverFU : pauseButtonFU
         }
     }
 
@@ -356,6 +399,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             return hoverStop ? stopButtonHoverCR : stopButtonCR
         } else if (website === "hidive") {
             return hoverStop ? stopButtonHoverHI : stopButtonHI
+        } else if (website === "funimation") {
+            return hoverStop ? stopButtonHoverFU : stopButtonFU
         }
     }
 
@@ -364,6 +409,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             return hoverLocation ? locationButtonHoverCR : locationButtonCR
         } else if (website === "hidive") {
             return hoverLocation ? locationButtonHoverHI : locationButtonHI
+        } else if (website === "funimation") {
+            return hoverLocation ? locationButtonHoverFU : locationButtonFU
         }
     }
 
@@ -372,6 +419,8 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
             return hoverTrash ? trashButtonHoverCR : trashButtonCR
         } else if (website === "hidive") {
             return hoverTrash ? trashButtonHoverHI : trashButtonHI
+        } else if (website === "funimation") {
+            return hoverTrash ? trashButtonHoverFU : trashButtonFU
         }
     }
 

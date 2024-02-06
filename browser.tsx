@@ -39,25 +39,18 @@ const App: React.FunctionComponent = () => {
             web?.loadURL("https://www.crunchyroll.com/")
         } else if (website === "hidive") {
             web?.loadURL("https://www.hidive.com/")
-            loginToHIDIVE()
+        } else if (website === "funimation") {
+            web?.loadURL("https://www.funimation.com/")
         }
     }, [ready, website])
-
-    const loginToHIDIVE = async () => {
-        const cookie = await ipcRenderer.invoke("get-hidive-cookie")
-        const email = await ipcRenderer.invoke("get-hidive-email")
-        const password = await ipcRenderer.invoke("get-hidive-password")
-        if (!cookie && !email && !password) return
-        const data = {ReturnUrl: "/dashboard", TwoFactorAuth: "False", Email: email, Password: password, BillingZipCode: "", BillingAddress: "anime"}
-        const response = await fetch(`https://www.hidive.com/account/login`, {method: "POST", body: JSON.stringify(data), headers: {cookie}}).then((r) => r.text())
-        console.log(response)
-    }
 
     const getSource = () => {
         if (website === "crunchyroll") {
             return "https://www.crunchyroll.com/"
         } else if (website === "hidive") {
             return "https://www.hidive.com/"
+        } else if (website === "funimation") {
+            return "https://www.funimation.com/"
         }
     }
 

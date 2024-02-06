@@ -4,11 +4,14 @@ import {Dropdown, DropdownButton} from "react-bootstrap"
 import {WebsiteContext} from "../renderer"
 import {TemplateContext, VideoQualityContext, TypeContext, LanguageContext, QualityContext, CodecContext,
 FormatContext, QueueContext, EnglishDialectContext, SpanishDialectContext, PortugeuseDialectContext, FontColorContext,
-TrimIntroContext, FontSizeContext, FontYPositionContext, CheckboxModeContext} from "../renderer"
+TrimIntroContext, FontSizeContext, FontYPositionContext, CheckboxModeContext, DubSubtitlesContext, DubCaptionsContext,
+TrimStartContext} from "../renderer"
 import checkboxCR from "../assets/crunchyroll/checkbox.png"
 import checkboxCheckedCR from "../assets/crunchyroll/checkbox-checked.png"
 import checkboxHI from "../assets/hidive/checkbox.png"
-import checkboxCheckedHI from "../assets/hidive/checkbox-checked.png"
+import checkboxCheckedHI from "../assets/funimation/checkbox-checked.png"
+import checkboxFU from "../assets/funimation/checkbox.png"
+import checkboxCheckedFU from "../assets/funimation/checkbox-checked.png"
 import "../styles/advancedsettings.less"
 
 const AdvancedSettings: React.FunctionComponent = (props) => {
@@ -29,7 +32,10 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
     const {fontColor, setFontColor} = useContext(FontColorContext)
     const {fontYPosition, setFontYPosition} = useContext(FontYPositionContext)
     const {trimIntro, setTrimIntro} = useContext(TrimIntroContext)
+    const {trimStart, setTrimStart} = useContext(TrimStartContext)
     const {checkboxMode, setCheckboxMode} = useContext(CheckboxModeContext)
+    const {dubSubtitles, setDubSubtitles} = useContext(DubSubtitlesContext)
+    const {dubCaptions, setDubCaptions} = useContext(DubCaptionsContext)
     const [cookieDeleted, setCookieDeleted] = useState(false)
 
     useEffect(() => {
@@ -58,6 +64,9 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         if (settings.portugeuseDialect) setPortugeuseDialect(settings.portugeuseDialect)
         if (settings.codec) setCodec(settings.codec)
         if (settings.trimIntro) setTrimIntro(settings.trimIntro)
+        if (settings.trimStart) setTrimStart(settings.trimStart)
+        if (settings.dubSubtitles) setDubSubtitles(settings.dubSubtitles)
+        if (settings.dubCaptions) setDubCaptions(settings.dubCaptions)
         if (settings.fontSize) setFontSize(settings.fontSize)
         if (settings.fontColor) setFontColor(settings.fontColor)
         if (settings.fontYPosition) setFontYPosition(settings.fontYPosition)
@@ -66,7 +75,8 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
 
     useEffect(() => {
         ipcRenderer.invoke("store-settings", {template, videoQuality, codec, queue, englishDialect, spanishDialect, 
-        portugeuseDialect, fontColor, fontSize, fontYPosition, trimIntro, checkboxMode})
+        portugeuseDialect, fontColor, fontSize, fontYPosition, trimIntro, dubSubtitles, dubCaptions, checkboxMode,
+        trimStart})
     })
 
     const ok = () => {
@@ -89,6 +99,9 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         setFontYPosition(20)
         setFontColor("#ffffff")
         setTrimIntro(true)
+        setTrimStart(10)
+        setDubSubtitles(false)
+        setDubCaptions(true)
         setCheckboxMode(false)
     }
 
@@ -97,6 +110,8 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
             return checked ? checkboxCheckedCR : checkboxCR
         } else if (website === "hidive") {
             return checked ? checkboxCheckedHI : checkboxHI
+        } else if (website === "funimation") {
+            return checked ? checkboxCheckedFU : checkboxFU
         }
     }
 
@@ -200,6 +215,25 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
         }
     }
 
+    const changeTrimStart = (event: React.ChangeEvent<HTMLInputElement>) => {
+        let value = event.target.value
+        if (Number.isNaN(Number(value.replaceAll(":", "")))) return
+        setTrimStart(value)
+    }
+
+    const changeTrimStartKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === "ArrowUp") {
+            setTrimStart((prev: any) => {
+                return Number(prev) + 1
+            })
+        } else if (event.key === "ArrowDown") {
+            setTrimStart((prev: any) => {
+                if (Number(prev) - 1 < 0) return Number(prev)
+                return Number(prev) - 1
+            })
+        }
+    }
+
     const deleteCookie = () => {
         ipcRenderer.invoke("delete-cookies")
         setCookieDeleted(true)
@@ -250,13 +284,14 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                                     <Dropdown.Item className="small-drop" active={englishDialect === "UK"} onClick={() => setEnglishDialect("UK")}>UK</Dropdown.Item>
                                 </DropdownButton>
                             </div></> : null}
+                            {website !== "funimation" ?
                             <div className="settings-row">
                                 <p className="settings-text">Spanish Dialect: </p>
                                 <DropdownButton className="small-drop" title={spanishDialect} drop="down">
                                     <Dropdown.Item className="small-drop" active={spanishDialect === "LA"} onClick={() => setSpanishDialect("LA")}>LA</Dropdown.Item>
                                     <Dropdown.Item className="small-drop" active={spanishDialect === "ES"} onClick={() => setSpanishDialect("ES")}>ES</Dropdown.Item>
                                 </DropdownButton>
-                            </div>
+                            </div> : null}
                             {website === "crunchyroll" ? <>
                             <div className="settings-row">
                                 <p className="settings-text">Portugeuse Dialect: </p>
@@ -279,9 +314,24 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                             </div>
                             {website === "hidive" ? <>
                             <div className="settings-row">
+                                <p className="settings-text">Dub Captions? </p>
+                                <img className="settings-checkbox" src={getCheckboxIcon(dubCaptions)} onClick={() => setDubCaptions((prev: boolean) => !prev)}/>
+                            </div></> : null}
+                            {website === "funimation" ? <>
+                            <div className="settings-row">
+                                <p className="settings-text">Dub Subtitles? </p>
+                                <img className="settings-checkbox" src={getCheckboxIcon(dubSubtitles)} onClick={() => setDubSubtitles((prev: boolean) => !prev)}/>
+                            </div></> : null}
+                            {website === "hidive" ? <>
+                            <div className="settings-row">
                                 <p className="settings-text">Trim Intro? </p>
                                 <img className="settings-checkbox" src={getCheckboxIcon(trimIntro)} onClick={() => setTrimIntro((prev: boolean) => !prev)}/>
                             </div></> : null}
+                            {website === "funimation" ?
+                            <div className="settings-row">
+                                <p className="settings-text">Trim Start: </p>
+                                <input className="settings-input" type="text" spellCheck="false" value={trimStart} onChange={changeTrimStart} onKeyDown={changeTrimStartKey}/>
+                            </div> : null}
                             <div className="settings-row">
                                 <p className="settings-text">Checkbox Mode? </p>
                                 <img className="settings-checkbox" src={getCheckboxIcon(checkboxMode)} onClick={() => setCheckboxMode((prev: boolean) => !prev)}/>

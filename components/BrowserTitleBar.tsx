@@ -29,6 +29,15 @@ import homeButtonHoverHI from "../assets/hidive/homeButton-hover.png"
 import downloadButtonHoverHI from "../assets/hidive/downloadButton-hover.png"
 import externalButtonHoverHI from "../assets/hidive/externalButton-hover.png"
 import refreshButtonHoverHI from "../assets/hidive/refreshButton-hover.png"
+import minimizeButtonHoverFU from "../assets/funimation/minimizeButton-hover.png"
+import maximizeButtonHoverFU from "../assets/funimation/maximizeButton-hover.png"
+import closeButtonHoverFU from "../assets/funimation/closeButton-hover.png"
+import backButtonHoverFU from "../assets/funimation/backButton-hover.png"
+import forwardButtonHoverFU from "../assets/funimation/forwardButton-hover.png"
+import homeButtonHoverFU from "../assets/funimation/homeButton-hover.png"
+import downloadButtonHoverFU from "../assets/funimation/downloadButton-hover.png"
+import externalButtonHoverFU from "../assets/funimation/externalButton-hover.png"
+import refreshButtonHoverFU from "../assets/funimation/refreshButton-hover.png"
 import functions from "../structures/functions"
 import "../styles/browsertitlebar.less"
 
@@ -85,8 +94,10 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
         const web = document.getElementById("webview") as any
         if (website === "crunchyroll") {
             web.loadURL("https://www.crunchyroll.com/")
-        } else {
+        } else if (website === "hidive") {
             web.loadURL("https://www.hidive.com/")
+        } else if (website === "funimation") {
+            web.loadURL("https://www.funimation.com/")
         }
     }
 
@@ -125,6 +136,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverHome ? homeButtonHoverCR : homeButton
         } else if (website === "hidive") {
             return hoverHome ? homeButtonHoverHI : homeButton
+        } else if (website === "funimation") {
+            return hoverHome ? homeButtonHoverFU : homeButton
         }
     }
 
@@ -133,6 +146,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverBack ? backButtonHoverCR : backButton
         } else if (website === "hidive") {
             return hoverBack ? backButtonHoverHI : backButton
+        } else if (website === "funimation") {
+            return hoverBack ? backButtonHoverFU : backButton
         }
     }
 
@@ -141,6 +156,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverForward ? forwardButtonHoverCR : forwardButton
         } else if (website === "hidive") {
             return hoverForward ? forwardButtonHoverHI : forwardButton
+        } else if (website === "funimation") {
+            return hoverForward ? forwardButtonHoverFU : forwardButton
         }
     }
 
@@ -149,7 +166,9 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverRefresh ? refreshButtonHoverCR : refreshButton
         } else if (website === "hidive") {
             return hoverRefresh ? refreshButtonHoverHI : refreshButton
-        }
+        } else if (website === "funimation") {
+            return hoverRefresh ? refreshButtonHoverFU : refreshButton
+        } 
     }
 
     const getExternalButton = () => {
@@ -157,6 +176,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverExternal ? externalButtonHoverCR : externalButton
         } else if (website === "hidive") {
             return hoverExternal ? externalButtonHoverHI : externalButton
+        } else if (website === "funimation") {
+            return hoverExternal ? externalButtonHoverFU : externalButton
         }
     }
 
@@ -165,6 +186,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverDownload ? downloadButtonHoverCR : downloadButton
         } else if (website === "hidive") {
             return hoverDownload ? downloadButtonHoverHI : downloadButton
+        } else if (website === "funimation") {
+            return hoverDownload ? downloadButtonHoverFU : downloadButton
         }
     }
 
@@ -173,6 +196,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverMin ? minimizeButtonHoverCR : minimizeButton
         } else if (website === "hidive") {
             return hoverMin ? minimizeButtonHoverHI : minimizeButton
+        } else if (website === "funimation") {
+            return hoverMin ? minimizeButtonHoverFU : minimizeButton
         }
     }
 
@@ -181,6 +206,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverMax ? maximizeButtonHoverCR : maximizeButton
         } else if (website === "hidive") {
             return hoverMax ? maximizeButtonHoverHI : maximizeButton
+        } else if (website === "funimation") {
+            return hoverMax ? maximizeButtonHoverFU : maximizeButton
         }
     }
 
@@ -189,6 +216,8 @@ const BrowserTitleBar: React.FunctionComponent = (props) => {
             return hoverClose ? closeButtonHoverCR : closeButton
         } else if (website === "hidive") {
             return hoverClose ? closeButtonHoverHI : closeButton
+        } else if (website === "funimation") {
+            return hoverClose ? closeButtonHoverFU : closeButton
         }
     }
 
