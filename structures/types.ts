@@ -108,7 +108,8 @@ export interface DownloadOptions {
   decryptionKey?: string
   headers?: string[]
   seek?: number
-  audioTrack?: string
+  audioTracks?: string[]
+  audioTrackNames?: string[]
   noHeaders?: boolean
   intro?: {startTime: number; endTime: number}
 }

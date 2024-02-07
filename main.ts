@@ -502,7 +502,7 @@ ipcMain.handle("download-subtitles", async (event, info) => {
 })
 
 ipcMain.handle("download-ass", async (event, info, ass, key) => {
-  let output = util.parseDest(info.episode, "ass", info.dest, info.template, null, info.language, key)
+  let output = util.parseDest(info.episode, "ass", info.dest, info.template, null, info.language, key, true)
   const folder = path.dirname(output)
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recursive: true})
   fs.writeFileSync(output, ass)

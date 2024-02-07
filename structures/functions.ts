@@ -13,6 +13,10 @@ export default class functions {
         return arr.filter(item => item !== val)
     }
 
+    public static arrayReorder = <T>(arr: T[], from: number, to: number) => {
+        return arr.splice(to, 0, arr.splice(from, 1)[0])
+    }
+
     public static removeDuplicates = <T>(arr: T[]) => {
         return [...new Set(arr)];
     }
@@ -61,6 +65,7 @@ export default class functions {
 
     public static parseLocale = (locale: string, hidive?: boolean) => {
         if (locale === "all") return "All"
+        if (locale === "all+audio") return "All+Audio"
         if (locale === "jaJP") return "Japanese"
         if (locale === "enUS") return "English"
         if (locale === "enGB") return "English"
@@ -73,6 +78,11 @@ export default class functions {
         if (locale === "ptBR") return "Portuguese"
         if (locale === "ptPT") return "Portuguese"
         if (locale === "arME") return "Arabic"
+        if (locale === "hiIN") return "Hindi"
+        if (locale === "idID") return "Indonesian"
+        if (locale === "msMY") return "Malay"
+        if (locale === "thTH") return "Thai"
+        if (locale === "viVN") return "Vietnamese"
         if (locale.toLowerCase() === "japanese") return "jaJP"
         if (locale.toLowerCase() === "english") return "enUS"
         if (locale.toLowerCase() === "spanish") return "esES"
@@ -82,6 +92,12 @@ export default class functions {
         if (locale.toLowerCase() === "russian") return "ruRU"
         if (locale.toLowerCase() === "portuguese") return "ptPT"
         if (locale.toLowerCase() === "arabic") return "arME"
+        if (locale.toLowerCase() === "hindi") return "hiIN"
+        if (locale.toLowerCase() === "hindi") return "hiIN"
+        if (locale.toLowerCase() === "indonesian") return "idID"
+        if (locale.toLowerCase() === "malay") return "msMY"
+        if (locale.toLowerCase() === "thai") return "thTH"
+        if (locale.toLowerCase() === "vietnamese") return "viVN"
         return "None"
     }
 
@@ -99,6 +115,10 @@ export default class functions {
         if (locale === "pt-PT") return "Portuguese"
         if (locale === "ar-SA") return "Arabic"
         if (locale === "hi-IN") return "Hindi"
+        if (locale === "id-ID") return "Indonesian"
+        if (locale === "ms-MY") return "Malay"
+        if (locale === "th-TH") return "Thai"
+        if (locale === "vi-VN") return "Vietnamese"
         if (locale === "jaJP") return "ja-JP"
         if (locale === "enUS") return "en-US"
         if (locale === "enGB") return "en-GB"
@@ -112,6 +132,10 @@ export default class functions {
         if (locale === "ptPT") return "pt-PT"
         if (locale === "arME") return "ar-SA"
         if (locale === "hiIN") return "hi-IN"
+        if (locale === "idID") return "id-ID"
+        if (locale === "msMY") return "ms-MY"
+        if (locale === "thTH") return "th-TH"
+        if (locale === "viVN") return "vi-VN"
         if (locale === "JP") return "ja-JP"
         if (locale === "US") return "en-US"
         if (locale === "GB") return "en-GB"
@@ -124,13 +148,13 @@ export default class functions {
         if (locale === "BR") return "pt-BR"
         if (locale === "PT") return "pt-PT"
         if (locale === "ME") return "ar-SA"
-        if (locale === "HI") return "hi-IN"
+        if (locale === "IN") return "hi-IN"
+        if (locale === "ID") return "id-ID"
+        if (locale === "MY") return "ms-MY"
+        if (locale === "TH") return "th-TH"
+        if (locale === "VN") return "vi-VN"
         if (locale === "all") return "all"
-        // id-ID
-        // ms-MY
-        // th-TH
-        // vi-VN
-        // ta-IN
+        if (locale === "all+audio") return "all+audio"
         return "None"
     }
 
@@ -163,6 +187,7 @@ export default class functions {
         if (language === "esLA") if (spanishDialect === "ES") dialect = "esES"
         if (language === "ptBR") if (portugeuseDialect === "PT") dialect = "ptPT"
         if (dialect === "all") dialect = "enUS"
+        if (dialect === "all+audio") dialect = "enUS"
         return dialect
     }
 
@@ -186,5 +211,23 @@ export default class functions {
     public static convertSeconds = (time: string) => {
         if (!time.includes(":")) return +time
         return +time.split(":").reduce((acc: string, time: string) => (60 * +acc) + +time as any)
+    }
+
+    public static formatSeconds = (seconds: number) => {
+        let hours = 0
+        let minutes = 0
+        while (seconds > 3600) {
+            seconds -= 3600
+            hours += 1
+        }
+        while (seconds > 60) {
+            seconds -= 60
+            minutes += 1
+        }
+        let minutesStr = String(minutes)
+        let secondsStr = seconds.toFixed(2)
+        if (String(minutesStr).length === 1) minutesStr = `0${minutes}`
+        if (String(secondsStr).length === 4) secondsStr = `0${secondsStr}`
+        return `${hours}:${minutesStr}:${secondsStr}`
     }
 }

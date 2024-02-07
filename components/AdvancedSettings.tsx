@@ -327,7 +327,7 @@ const AdvancedSettings: React.FunctionComponent = (props) => {
                                 <p className="settings-text">Trim Intro? </p>
                                 <img className="settings-checkbox" src={getCheckboxIcon(trimIntro)} onClick={() => setTrimIntro((prev: boolean) => !prev)}/>
                             </div></> : null}
-                            {website === "funimation" ?
+                            {website === "crunchyroll" || website === "funimation" ?
                             <div className="settings-row">
                                 <p className="settings-text">Trim Start: </p>
                                 <input className="settings-input" type="text" spellCheck="false" value={trimStart} onChange={changeTrimStart} onKeyDown={changeTrimStartKey}/>

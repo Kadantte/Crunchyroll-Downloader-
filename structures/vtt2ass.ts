@@ -568,24 +568,26 @@ function vtt(group: string | undefined, xFontSize: number | undefined, vttStr: s
   )
 }
 
-const editAss = (ass: string, fontSize: number, fontColor: string, fontYPosition: number, mp4Fix?: boolean) => {
+const editAss = (ass: string, fontSize: number, fontColor: string, fontYPosition: number, mp4Fix?: boolean, timeMargin?: number) => {
   fontColor = functions.reverseRGB(fontColor.replace("#", "").toUpperCase())
   fontSize = Number(fontSize) - 20
+  timeMargin = timeMargin ? Number(timeMargin) : 0
   if (fontSize < 0) fontSize = 1
   const lines = ass.split("\n")
   const newLines = []
 
-  const keys = ["Name", "Fontname", "Fontsize", "PrimaryColour", "SecondaryColour", 
+  const styleKeys = ["Name", "Fontname", "Fontsize", "PrimaryColour", "SecondaryColour", 
                 "OutlineColour", "BackColour", "Bold", "Italic", "Underline", "Strikeout", 
                 "ScaleX", "ScaleY", "Spacing", "Angle", "BorderStyle", "Outline", "Shadow", 
                 "Alignment", "MarginL", "MarginR", "MarginV", "Encoding"]
+  const dialogueKeys = ["Layer", "Start", "End", "Style", "Name", "MarginL", "MarginR", "MarginV", "Effect", "Text"]
   for (let i = 0; i < lines.length; i++) {
       let line = lines[i]
       if (lines[i].startsWith("Style")) {
           const values = lines[i].replace("Style: ", "").split(",")
           let obj = {} as any
           for (let j = 0; j < values.length; j++) {
-              obj[keys[j]] = values[j]
+              obj[styleKeys[j]] = values[j]
           }
           obj.PrimaryColour = `&H00${fontColor}`
           if (mp4Fix) {
@@ -598,6 +600,23 @@ const editAss = (ass: string, fontSize: number, fontColor: string, fontYPosition
               obj.MarginV = `00${fontYPosition}`
           }
           line = `Style: ${Object.values(obj).join(",")}`
+      }
+      if (lines[i].startsWith("Dialogue")) {
+          let values = lines[i].replace("Dialogue: ", "").split(",")
+          if (values[11]) {
+              const newT = [...values[10], ...values[11]].join("")
+              values.splice(9)
+              values.push(newT)
+          }
+          let obj = {} as any
+          for (let j = 0; j < values.length; j++) {
+              obj[dialogueKeys[j]] = values[j]
+          }
+          const start = functions.convertSeconds(obj.Start) - timeMargin
+          const end = functions.convertSeconds(obj.End) - timeMargin
+          obj.Start = functions.formatSeconds(start)
+          obj.End = functions.formatSeconds(end)
+          line = `Dialogue: ${Object.values(obj).join(",")}`
       }
       newLines.push(line)
   }

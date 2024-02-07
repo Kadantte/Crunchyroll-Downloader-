@@ -34,6 +34,7 @@ export default class Util {
       .replace(/{episodeNumber}/gi, episode.episode_number)
       .replace(/{resolution}/gi, `${resolution}p`)
       .replace(/{language}/gi, Util.parseLocale(language ?? "enUS"))
+      .replaceAll(",", "").replaceAll("'", "").replaceAll("\"", "")
     }
 
     public static parseDuration = async (file: string, ffmpegPath?: string) => {
@@ -100,7 +101,7 @@ export default class Util {
       return "None"
     }
 
-    private static readonly findQuality = async (episode: CrunchyrollEpisode, quality?: number, stream?: string, headers?: any) => {
+    public static findQuality = async (episode: CrunchyrollEpisode, quality?: number, stream?: string, headers?: any) => {
       if (!quality) quality = 1080
       const found: any[] = []
       const streams = stream ? [stream] : episode.stream_data.streams.map((s) => s.url)
@@ -119,7 +120,7 @@ export default class Util {
       return found.reduce((prev, curr) => curr.attributes.RESOLUTION.height > prev.attributes.RESOLUTION.height ? curr : prev)
     }
 
-    public static parseDest = (episode: CrunchyrollEpisode, format: string, dest?: string, template?: string, playlist?: any, language?: string, key?: string) => {
+    public static parseDest = (episode: CrunchyrollEpisode, format: string, dest?: string, template?: string, playlist?: any, language?: string, key?: string, noOverwrite?: boolean) => {
       if (!dest) dest = "./"
       if (!key) key = ""
       if (!path.isAbsolute(dest)) {
@@ -130,6 +131,13 @@ export default class Util {
         return `${dest}/${Util.parseTemplate(episode, template, playlist, language)}${key}`
       }
       if (!path.extname(dest)) dest += `/${Util.parseTemplate(episode, template, playlist, language)}${key}.${format}`
+      if (fs.existsSync(dest) && noOverwrite) {
+        let i = 1
+        while (fs.existsSync(dest)) {
+          dest = `${path.dirname(dest)}/${path.basename(dest, path.extname(dest))}_${i}.${format}`
+          i++
+        }
+      }
       return dest
     }
 
@@ -172,7 +180,7 @@ export default class Util {
       } else {
         video.input(uri)
       }
-      video.args("-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0")
+      if (!options.noHeaders) video.args("-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0")
       if (options.seek) video.args("-ss", String(options.seek))
       if (options.headers) {
         for (let i = 0; i < options.headers.length; i++) {
@@ -180,12 +188,16 @@ export default class Util {
         }
       }
       let subShift = 0
-      if (options.audioTrack) {
-        subShift = 1
-        const audio = video.input(options.audioTrack)
-        ffmpegArgs.unshift("-map", "0:v:0", "-map", "1:a:0")
-        audio.args("-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0")
-        if (options.seek) audio.args("-ss", String(options.seek))
+      if (options.audioTracks?.length) {
+        ffmpegArgs.unshift("-map", "0", "-map", "-0:a")
+        for (let i = 0; i < options.audioTracks.length; i++) {
+          const audio = video.input(options.audioTracks[i])
+          ffmpegArgs.push("-map", `${i+1}:a:0`)
+          if (options.audioTrackNames?.[i]) ffmpegArgs.push(`-metadata:s:a:${i}`, `title=${options.audioTrackNames[i]}`)
+          if (!options.noHeaders) audio.args("-user_agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0")
+          if (options.seek) audio.args("-ss", String(options.seek))
+          subShift += 1
+        }
       }
       let assFiles = []
       if (options.softSubs && options.subtitles) {
@@ -197,7 +209,7 @@ export default class Util {
           if (!options.subtitles[i].includes("http")) assFiles.push(options.subtitles[i])
         }
       } else if (options.subtitles?.length) {
-        ffmpegArgs.unshift("-vf", `ass=${options.subtitles[0].replaceAll(",", "\\,")}`)
+        ffmpegArgs.unshift("-vf", `ass=${options.subtitles[0]}`)
         video.input(options.subtitles[0])
         if (!options.subtitles[0].includes("http")) assFiles.push(options.subtitles[0])
       }
@@ -230,12 +242,16 @@ export default class Util {
       }
       try {
         await process.complete()
-        if (metadataPath) fs.unlinkSync(metadataPath)
-        for (let i = 0; i < assFiles.length; i++) {
-          fs.unlinkSync(assFiles[i])
-        }
       } catch (err) {
         if (!killed) return Promise.reject(err)
+      }
+      if (metadataPath) fs.unlinkSync(metadataPath)
+      for (let i = 0; i < assFiles.length; i++) {
+        try {
+          fs.unlinkSync(assFiles[i])
+        } catch {
+          // ignore
+        }
       }
       return dest as string
     }

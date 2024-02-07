@@ -232,7 +232,7 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
                 container.style.backgroundColor = backgroundColorHI
                 container.style.border = `2px solid ${pSBC(0.4, backgroundColorHI)}`
             } else if (website === "funimation") {
-                container.style.backgroundColor = backgroundColorHI
+                container.style.backgroundColor = backgroundColorFU
                 container.style.border = `2px solid ${pSBC(0.4, backgroundColorFU)}`
             }
         } else {
@@ -320,7 +320,13 @@ const EpisodeContainer: React.FunctionComponent<EpisodeContainerProps> = (props:
 
     const mouseLeave = () => {
         setHover(false)
-        document.documentElement.style.setProperty("--selection-color", "#ff9270")
+        if (website === "crunchyroll") {
+            document.documentElement.style.setProperty("--selection-color", "#ff9270")
+        } else if (website === "hidive") {
+            document.documentElement.style.setProperty("--selection-color", "#708aff")
+        } else if (website === "funimation") {
+            document.documentElement.style.setProperty("--selection-color", "#b070ff")
+        }
     }
 
     const getLabel = () => {

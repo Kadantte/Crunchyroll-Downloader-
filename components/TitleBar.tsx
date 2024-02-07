@@ -154,6 +154,7 @@ const TitleBar: React.FunctionComponent = (props) => {
         let isFunimation = websiteValue !== undefined ? websiteValue === "funimation" : website === "funimation"
         if (isDark) {
             if (isCrunchyroll) {
+                document.documentElement.style.setProperty("--selection-color", "#ff9270")
                 document.documentElement.style.setProperty("--bg-color", "#090409")
                 document.documentElement.style.setProperty("--title-color", "#090409")
                 document.documentElement.style.setProperty("--text-color", "#ff5b28")
@@ -178,6 +179,7 @@ const TitleBar: React.FunctionComponent = (props) => {
                 document.documentElement.style.setProperty("--version-reject-text", "#ff4252")
                 document.documentElement.style.setProperty("--cookie-button", "#ff334e")
             } else if (isHiDive) {
+                document.documentElement.style.setProperty("--selection-color", "#708aff")
                 document.documentElement.style.setProperty("--bg-color", "#090409")
                 document.documentElement.style.setProperty("--title-color", "#090409")
                 document.documentElement.style.setProperty("--text-color", "#2845ff")
@@ -202,6 +204,7 @@ const TitleBar: React.FunctionComponent = (props) => {
                 document.documentElement.style.setProperty("--version-reject-text", "#4842ff")
                 document.documentElement.style.setProperty("--cookie-button", "#2631fe")
             } else if (isFunimation) {
+                document.documentElement.style.setProperty("--selection-color", "#b070ff")
                 document.documentElement.style.setProperty("--bg-color", "#090409")
                 document.documentElement.style.setProperty("--title-color", "#090409")
                 document.documentElement.style.setProperty("--text-color", "#6528ff")
@@ -231,6 +234,7 @@ const TitleBar: React.FunctionComponent = (props) => {
             ipcRenderer.invoke("update-color", "dark")
         } else {
             if (isCrunchyroll) {
+                document.documentElement.style.setProperty("--selection-color", "#ff9270")
                 document.documentElement.style.setProperty("--bg-color", "#f97540")
                 document.documentElement.style.setProperty("--title-color", "#ff5b28")
                 document.documentElement.style.setProperty("--text-color", "black")

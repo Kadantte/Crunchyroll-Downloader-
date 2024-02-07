@@ -19,6 +19,7 @@ import ErrorMessage from "./ErrorMessage"
 import "../styles/searchbar.less"
 import {vtt, editAss} from "../structures/vtt2ass"
 import functions from "../structures/functions"
+import util from "../structures/util"
 import HIDIVE from "../structures/hidive"
 import {getKeys} from "../structures/widevine"
 import {TypeContext, QualityContext, CodecContext, FormatContext, LanguageContext, TemplateContext, 
@@ -88,9 +89,9 @@ const SearchBar: React.FunctionComponent = (props) => {
     const initSettings = async () => {
         const settings = await ipcRenderer.invoke("init-settings")
         if (settings.type) setType(settings.type)
-        if (settings.language) setLanguage(settings.language)
         if (settings.quality) setQuality(settings.quality)
         if (settings.format) setFormat(settings.format)
+        if (settings.language) setLanguage(settings.language)
     }
 
     const changeDirectory = async () => {
@@ -105,17 +106,40 @@ const SearchBar: React.FunctionComponent = (props) => {
         const id = url.match(/(?<=watch\/)(.*?)(?=\/)/)?.[0] ?? ""
         let dialect = functions.getDialect(language, englishDialect, spanishDialect, portugeuseDialect)
         let audioLang = type === "sub" ? "ja-JP" : functions.dashLocale(dialect)
-        if (audioLang === "all") audioLang = "ja-JP"
+        if (audioLang === "all" || audioLang === "all+audio") audioLang = "ja-JP"
         let json = await fetch(`https://www.crunchyroll.com/content/v2/cms/objects/${id}?locale=${functions.dashLocale(dialect)}`, {headers: {cookie, host, Authorization: `Bearer ${token}`}}).then((r) => r.json())
         const meta = json.data[0]
         const episodeMeta = meta.episode_metadata
-        const version = episodeMeta.versions.find((v: any) => v.audio_locale === audioLang)
-        const streamsUrl = `https://www.crunchyroll.com/content/v2/cms/videos/${version.media_guid}/streams`
-        const streamsJSON = await fetch(streamsUrl, {headers: {cookie, host, Authorization: `Bearer ${token}`}}).then((r) => r.json())
+        let versions = []
+        for (let i = 0; i < episodeMeta.versions.length; i++) {
+            const version = episodeMeta.versions[i]
+            if (language !== "all+audio") if (version.audio_locale !== audioLang) continue
+            let streams = null as any
+            let subtitles = null as any
+            let bif_url = ""
+            let audio_locale = ""
+            try {
+                const request = await fetch(`https://www.crunchyroll.com/index/v2`, {headers: {cookie, host, Authorization: `Bearer ${token}`}}).then((r) => r.json())
+                const keySig = `Policy=${request.cms.policy}&Signature=${request.cms.signature}&Key-Pair-Id=${request.cms.key_pair_id}`
+                const streamsRequest = await fetch(`https://beta-api.crunchyroll.com/cms/v2${request.cms.bucket}/videos/${version.media_guid}/streams?streams=all&textType=all&${keySig}`, {headers: {cookie, host, Authorization: `Bearer ${token}`}}).then((r) => r.json()).catch(() => "")
+                streams = streamsRequest.streams
+                subtitles = streamsRequest.subtitles
+                bif_url = streamsRequest.bifs[0]
+                audio_locale = streamsRequest.audio_locale
+            } catch {
+                const streamsUrl = `https://www.crunchyroll.com/content/v2/cms/videos/${version.media_guid}/streams`
+                const streamsRequest = await fetch(streamsUrl, {headers: {cookie, host, Authorization: `Bearer ${token}`}}).then((r) => r.json())
+                streams = streamsRequest.data[0]
+                subtitles = streamsRequest.meta.subtitles
+                bif_url = streamsRequest.meta.bifs[0]
+                audio_locale = streamsRequest.meta.audio_locale
+            }
+            versions.push({streams, subtitles, bif_url, audio_locale})
+        }
         const episode = { 
             episode_number: episodeMeta.episode_number, duration: episodeMeta.duration_ms/1000, url, description: meta.description,
-            name: meta.title, series_name: episodeMeta.series_title, collection_name: episodeMeta.season_title, screenshot_image: {large_url: meta.images.thumbnail[0][meta.images.thumbnail[0].length - 1].source}, bif_url: streamsJSON.meta.bifs[0],
-            streams: streamsJSON}
+            name: meta.title, series_name: episodeMeta.series_title, collection_name: episodeMeta.season_title, screenshot_image: {large_url: meta.images.thumbnail[0][meta.images.thumbnail[0].length - 1].source}, bif_url: versions[0].bif_url,
+            versions}
         return episode
     }
 
@@ -141,41 +165,74 @@ const SearchBar: React.FunctionComponent = (props) => {
     }
 
     const parsePlaylist = async (episode: any, noSub?: boolean) => {
-        const streams = episode.streams.data[0]
+        let videoTrack = null as any
+        let audioTracks = [] as any
+        let audioTrackNames = [] as any
+        let needsDecryption = false
         let audioLang = type === "sub" ? "ja-JP" : functions.dashLocale(language)
-        if (audioLang === "all") audioLang = "ja-JP"
-        if (episode.streams.meta.audio_locale !== audioLang) {
+        if (audioLang === "all" || language === "all+audio") audioLang = "ja-JP"
+        const found = episode.versions.find((v: any) => v.audio_locale === audioLang)
+        if (!found) {
             if (type === "sub") audioLang = "zh-CN"
-            if (episode.streams.meta.audio_locale !== audioLang) return null
+            const found = episode.versions.find((v: any) => v.audio_locale === audioLang)
+            if (!found) return {videoTrack, audioTracks, audioTrackNames, needsDecryption}
         }
         let dialect = functions.getDialect(language, englishDialect, spanishDialect, portugeuseDialect)
         let subLang = type === "dub" || noSub ? "" : functions.dashLocale(dialect)
-        let stream = streams.drm_adaptive_dash[subLang].url
-        if (!stream && language === "esLA") stream = streams.drm_adaptive_dash["es-ES"].url
-        if (!stream && language === "ptBR") stream = streams.drm_adaptive_dash["pt-PT"].url
-        if (!stream) stream = streams.drm_trailer_dash[subLang].url
-        if (!stream) return null
-        return stream
+        for (let i = 0; i < episode.versions.length; i++) {
+            const version = episode.versions[i]
+            if (language !== "all+audio") if (version.audio_locale !== audioLang) continue
+            if (!version.streams.download_hls) {
+                videoTrack = version.streams.drm_adaptive_dash[subLang].url
+                if (!videoTrack && language === "esLA") videoTrack = version.streams.drm_adaptive_dash["es-ES"].url
+                if (!videoTrack && language === "ptBR") videoTrack = version.streams.drm_adaptive_dash["pt-PT"].url
+                if (!videoTrack) videoTrack = version.streams.drm_trailer_dash[subLang].url
+                needsDecryption = true
+            } else {
+                videoTrack = version.streams.download_hls[subLang].url
+                if (!videoTrack && language === "esLA") videoTrack = version.streams.download_hls["es-ES"].url
+                if (!videoTrack && language === "ptBR") videoTrack = version.streams.download_hls["pt-PT"].url
+                if (!videoTrack) videoTrack = version.streams.trailer_hls[subLang].url
+            }
+            if (language === "all+audio") {
+                audioTracks.push(videoTrack)
+                audioTrackNames.push(functions.dashLocale(version.audio_locale))
+            }
+        }
+        for (let i = 0; i < audioTrackNames.length; i++) {
+            if (audioTrackNames[i] === "Japanese") {
+                functions.arrayReorder(audioTracks, i, 0)
+                functions.arrayReorder(audioTrackNames, i, 0)
+            }
+        }
+        return {videoTrack, audioTracks, audioTrackNames, needsDecryption}
     }
 
     const parseSubtitles = async (info: {id: number, episode: any, dest: string, kind: string}, error?: boolean, noDL?: boolean, mp4Fix?: boolean) => {
-        const meta = info.episode.streams.meta
         let subLang = functions.dashLocale(language)
         let subtitles = [] as string[]
         let subtitleNames = [] as string[]
-        for (const [key, value] of Object.entries(meta.subtitles)) {
-            if (subLang === "all") {
+        const version = info.episode.versions.find((v: any) => v.audio_locale === "ja-JP")
+        if (!version) return {subtitles, subtitleNames}
+        for (const [key, value] of Object.entries(version.subtitles)) {
+            if (subLang === "all" || subLang === "all+audio") {
                 subtitleNames.push(functions.dashLocale(key))
                 const assStr = await fetch((value as any).url).then((r) => r.text())
-                const edited = editAss(assStr, fontSize, fontColor, fontYPosition)
+                const edited = editAss(assStr, fontSize, fontColor, fontYPosition, false, trimStart ? functions.convertSeconds(trimStart) : 0)
                 const file = await ipcRenderer.invoke("download-ass", info, edited, ` ${functions.dashLocale(key)}`)
                 subtitles.push(file)
             } else if (key === subLang) {
                 subtitleNames.push(functions.dashLocale(key))
                 const assStr = await fetch((value as any).url).then((r) => r.text())
-                const edited = editAss(assStr, fontSize, fontColor, fontYPosition, mp4Fix)
+                const edited = editAss(assStr, fontSize, fontColor, fontYPosition, mp4Fix, trimStart ? functions.convertSeconds(trimStart) : 0)
                 const file = await ipcRenderer.invoke("download-ass", info, edited)
                 subtitles.push(file)
+            }
+        }
+        for (let i = 0; i < subtitleNames.length; i++) {
+            if (subtitleNames[i] === "English") {
+                functions.arrayReorder(subtitles, i, 0)
+                functions.arrayReorder(subtitleNames, i, 0)
             }
         }
         if (!subtitles?.[0]) return error ? ipcRenderer.invoke("download-error", "search") : {subtitles, subtitleNames}
@@ -192,7 +249,6 @@ const SearchBar: React.FunctionComponent = (props) => {
         const userID = await ipcRenderer.invoke("get-account-id")
 
         const auth = await fetch("https://pl.crunchyroll.com/drm/v1/auth", {method: "POST", body: JSON.stringify({"accounting_id": "crunchyroll", "asset_id": assetID, "session_id": sessionID, "user_id": userID})}).then((r) => r.json()) as any
-
         const keys = await getKeys(pssh, "https://lic.drmtoday.com/license-proxy-widevine/cenc/", {"dt-custom-data": auth.custom_data, "x-dt-auth-token": auth.token})
         return keys.length ? `${keys[1].key}` : ""
     }
@@ -252,6 +308,7 @@ const SearchBar: React.FunctionComponent = (props) => {
     const downloadCrunchyroll = async (searchText: string, html?: string) => {
         if (!searchText) return
         let opts = {resolution: Number(quality), quality: videoQuality, language, template, codec} as any
+        if (trimStart) opts.seek = trimStart
         if (type === "sub") opts.preferSub = true
         if (type === "dub") {
             opts.preferSub = false
@@ -277,22 +334,22 @@ const SearchBar: React.FunctionComponent = (props) => {
                     if (subtitles) downloaded = true
                 } else if (opts.softSubs) {
                     const {subtitles, subtitleNames} = await parseSubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true)
-                    const playlist = await parsePlaylist(episodes[i], true)
-                    if (!playlist) continue
-                    const decryptionKey = await getDecryptionKey(playlist)
+                    const {videoTrack, audioTracks, audioTrackNames, needsDecryption} = await parsePlaylist(episodes[i], true)
+                    if (!videoTrack) continue
+                    const decryptionKey = needsDecryption ? await getDecryptionKey(videoTrack) : ""
                     downloaded = true
-                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, decryptionKey, ...opts})
+                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, decryptionKey, ...opts})
                 } else {
                     let {subtitles, subtitleNames} = await parseSubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
                     if (type === "dub" && language === "jaJP") {
                         subtitles = null
                         subtitleNames = null
                     }
-                    const playlist = await parsePlaylist(episodes[i], true)
-                    if (!playlist) continue
-                    const decryptionKey = await getDecryptionKey(playlist)
+                    const {videoTrack, audioTracks, audioTrackNames, needsDecryption} = await parsePlaylist(episodes[i], true)
+                    if (!videoTrack) continue
+                    const decryptionKey = needsDecryption ? await getDecryptionKey(videoTrack) : ""
                     downloaded = true
-                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, decryptionKey, ...opts})
+                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, decryptionKey, ...opts})
                     }
                 current += 1
                 setID(prev => prev + 1)
@@ -307,11 +364,11 @@ const SearchBar: React.FunctionComponent = (props) => {
                 })
             } else if (opts.softSubs) {
                     const {subtitles, subtitleNames} = await parseSubtitles({id: 0, episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true)
-                    const playlist = await parsePlaylist(episode, true)
-                    if (!playlist) return ipcRenderer.invoke("download-error", "search")
-                    const decryptionKey = await getDecryptionKey(playlist)
+                    const {videoTrack, audioTracks, audioTrackNames, needsDecryption} = await parsePlaylist(episode, true)
+                    if (!videoTrack) return ipcRenderer.invoke("download-error", "search")
+                    const decryptionKey = needsDecryption ? await getDecryptionKey(videoTrack) : ""
                     setID((prev) => {
-                        ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, decryptionKey, ...opts})
+                        ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, decryptionKey, ...opts})
                         return prev + 1
                     })
             } else {
@@ -320,11 +377,11 @@ const SearchBar: React.FunctionComponent = (props) => {
                     subtitles = null
                     subtitleNames = null
                 }
-                const playlist = await parsePlaylist(episode, true)
-                if (!playlist) return ipcRenderer.invoke("download-error", "search")
-                const decryptionKey = await getDecryptionKey(playlist)
+                const {videoTrack, audioTracks, audioTrackNames, needsDecryption} = await parsePlaylist(episode, true)
+                if (!videoTrack) return ipcRenderer.invoke("download-error", "search")
+                const decryptionKey = needsDecryption ? await getDecryptionKey(videoTrack) : ""
                 setID((prev) => {
-                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, decryptionKey, ...opts})
+                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, decryptionKey, ...opts})
                     return prev + 1
                 })
             }
@@ -376,17 +433,27 @@ const SearchBar: React.FunctionComponent = (props) => {
     }
     
     const parseHIDIVEPlaylist = async (episode: any, noSub?: boolean) => {
+        let videoTrack = null as any
+        let audioTracks = [] as any
+        let audioTrackNames = [] as any
         let audioLang = type === "sub" ? "Japanese" : functions.parseLocale(language)
-        if (audioLang === "all") audioLang = "Japanese"
+        if (audioLang === "all" || audioLang === "all+audio") audioLang = "Japanese"
         let subLang = type === "dub" || noSub ? "" : functions.parseLocale(language)
-        let stream = null as any
         for (const [key, value] of Object.entries(episode.videos)) {
-            if (key.toLowerCase().includes(audioLang.toLowerCase())) {
-                stream = (value as any).hls[0]
-                break
+            if (language !== "all+audio") if (!key.toLowerCase().includes(audioLang.toLowerCase())) continue
+            videoTrack = (value as any).hls[0]
+            if (language === "all+audio") {
+                audioTracks.push(videoTrack)
+                audioTrackNames.push(key.split(",")[0])
             }
         }
-        return stream
+        for (let i = 0; i < audioTrackNames.length; i++) {
+            if (audioTrackNames[i] === "Japanese") {
+                functions.arrayReorder(audioTracks, i, 0)
+                functions.arrayReorder(audioTrackNames, i, 0)
+            }
+        }
+        return {videoTrack, audioTracks, audioTrackNames}
     }
 
     const parseHIDIVESubtitles = async (info: {id: number, episode: any, dest: string, kind: string}, error?: boolean, noDL?: boolean, ass?: boolean) => {
@@ -403,7 +470,7 @@ const SearchBar: React.FunctionComponent = (props) => {
                     break
                 }
             }
-            if (language === "all") {
+            if (language === "all" || language === "all+audio") {
                 subtitleNames.push(key.replace(" Subs", ""))
                 if (ass) {
                     const vttStr = await fetch(value as any).then((r) => r.text())
@@ -425,6 +492,12 @@ const SearchBar: React.FunctionComponent = (props) => {
                 } else {
                     subtitles.push(value as any)
                 }
+            }
+        }
+        for (let i = 0; i < subtitleNames.length; i++) {
+            if (subtitleNames[i] === "English") {
+                functions.arrayReorder(subtitles, i, 0)
+                functions.arrayReorder(subtitleNames, i, 0)
             }
         }
         if (!subtitles?.[0]) return error ? ipcRenderer.invoke("download-error", "search") : {subtitles, subtitleNames}
@@ -497,20 +570,20 @@ const SearchBar: React.FunctionComponent = (props) => {
                     if (subtitles) downloaded = true
                 } else if (opts.softSubs) {
                     const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
-                    const playlist = await parseHIDIVEPlaylist(episodes[i], true)
-                    if (!playlist) continue
+                    const {videoTrack, audioTracks, audioTrackNames} = await parseHIDIVEPlaylist(episodes[i], true)
+                    if (!videoTrack) continue
                     downloaded = true
-                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, ...opts})
+                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                 } else {
                     let {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
                     if (type === "dub" && language === "jaJP") {
                         subtitles = null
                         subtitleNames = null
                     }
-                    const playlist = await parseHIDIVEPlaylist(episodes[i])
-                    if (!playlist) continue
+                    const {videoTrack, audioTracks, audioTrackNames} = await parseHIDIVEPlaylist(episodes[i])
+                    if (!videoTrack) continue
                     downloaded = true
-                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, ...opts})
+                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                     }
                 current += 1
                 setID(prev => prev + 1)
@@ -525,10 +598,10 @@ const SearchBar: React.FunctionComponent = (props) => {
                 })
             } else if (opts.softSubs) {
                     const {subtitles, subtitleNames} = await parseHIDIVESubtitles({id: 0, episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
-                    const playlist = await parseHIDIVEPlaylist(episode, true)
-                    if (!playlist) return ipcRenderer.invoke("download-error", "search")
+                    const {videoTrack, audioTracks, audioTrackNames} = await parseHIDIVEPlaylist(episode, true)
+                    if (!videoTrack) return ipcRenderer.invoke("download-error", "search")
                     setID((prev) => {
-                        ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, ...opts})
+                        ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                         return prev + 1
                     })
             } else {
@@ -537,10 +610,10 @@ const SearchBar: React.FunctionComponent = (props) => {
                     subtitles = null
                     subtitleNames = null
                 }
-                const playlist = await parseHIDIVEPlaylist(episode)
-                if (!playlist) return ipcRenderer.invoke("download-error", "search")
+                const {videoTrack, audioTracks, audioTrackNames} = await parseHIDIVEPlaylist(episode)
+                if (!videoTrack) return ipcRenderer.invoke("download-error", "search")
                 setID((prev) => {
-                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist, subtitles, subtitleNames, ...opts})
+                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                     return prev + 1
                 })
             }
@@ -584,21 +657,42 @@ const SearchBar: React.FunctionComponent = (props) => {
         const cookie = await ipcRenderer.invoke("get-funimation-cookie")
         const token = await ipcRenderer.invoke("get-funimation-token")
         const region = await ipcRenderer.invoke("get-funimation-region")
+        let videoTrack = null as any 
+        let audioTracks = [] as any
+        let audioTrackNames = [] as any
         let audioLang = type === "sub" ? "Japanese" : functions.parseLocale(language)
-        if (audioLang === "all") audioLang = "Japanese"
-        let media = episode.media.find((m: any) => m.language === audioLang && m.version === "Uncut")
-        if (!media) media = episode.media.find((m: any) => m.language === audioLang && m.version === "Simulcast")
-        if (!media) media = episode.media.find((m: any) => m.language === audioLang && m.version === "Extras")
-        const avail = media.avails.find((a: any) => a.territoryCode === region && a.purchase === "SVOD")
-        const response = await fetch(`https://prod-api-funimationnow.dadcdigital.com/api/source/catalog/video/${avail.item}/signed`, {headers: {cookie, Authorization: `Token ${token}`, devicetype: "Android Phone"}}).then((r) => r.json())
-        const m3u8 = response.items.find((r: any) => r.videoType === "m3u8")
-        const mp4 = response.items.find((r: any) => r.videoType === "mp4")
-        return {videoTrack: m3u8.src, audioTrack: mp4.src}
+        if (audioLang === "all" || audioLang === "all+audio") audioLang = "Japanese"
+
+        const uncutMedia = episode.media.filter((m: any) => m.version === "Uncut")
+        const simulcastMedia = episode.media.filter((m: any) => m.version === "Simulcast")
+        const extrasMedia = episode.media.filter((m: any) => m.version === "Extras")
+
+        const combinedMedia = uncutMedia.length ? uncutMedia : simulcastMedia
+        if (extrasMedia.length) combinedMedia.push(...extrasMedia)
+
+        for (let i = 0; i < combinedMedia.length; i++) {
+            const media = combinedMedia[i]
+            const avail = media.avails.find((a: any) => a.territoryCode === region && a.purchase === "SVOD")
+            if (language !== "all+audio") if (avail.language !== audioLang) continue
+            const response = await fetch(`https://prod-api-funimationnow.dadcdigital.com/api/source/catalog/video/${avail.item}/signed`, {headers: {cookie, Authorization: `Token ${token}`, devicetype: "Android Phone"}}).then((r) => r.json())
+            const m3u8 = response.items.find((r: any) => r.videoType === "m3u8")
+            const mp4 = response.items.find((r: any) => r.videoType === "mp4")
+            videoTrack = m3u8.src
+            audioTracks.push(mp4.src)
+            audioTrackNames.push(avail.language)
+        }
+        for (let i = 0; i < audioTrackNames.length; i++) {
+            if (audioTrackNames[i] === "Japanese") {
+                functions.arrayReorder(audioTracks, i, 0)
+                functions.arrayReorder(audioTrackNames, i, 0)
+            }
+        }
+        return {videoTrack, audioTracks, audioTrackNames}
     }
 
     const parseFunimationSubtitles = async (info: {id: number, episode: any, dest: string, kind: string}, error?: boolean, noDL?: boolean, ass?: boolean) => {
         let audioLang = type === "sub" ? "Japanese" : functions.parseLocale(language)
-        if (audioLang === "all") audioLang = "Japanese"
+        if (audioLang === "all" || audioLang === "all+audio") audioLang = "Japanese"
         let media = info.episode.media.find((m: any) => m.language === audioLang && m.version === "Uncut")
         if (!media) media = info.episode.media.find((m: any) => m.language === audioLang && m.version === "Simulcast")
         if (!media) media = info.episode.media.find((m: any) => m.language === audioLang && m.version === "Extras")
@@ -610,7 +704,7 @@ const SearchBar: React.FunctionComponent = (props) => {
 
         let target = ass ? "vtt" : format
         for (let i = 0; i < media.mediaChildren.length; i++) {
-            if (language === "all" && media.mediaChildren[i].ext === target) {
+            if ((language === "all" || language === "all+audio") && media.mediaChildren[i].ext === target) {
                 if (ass) {
                     subtitleNames.push(media.mediaChildren[i].language)
                     const vttStr = await fetch(media.mediaChildren[i].filePath).then((r) => r.text())
@@ -632,6 +726,12 @@ const SearchBar: React.FunctionComponent = (props) => {
                     subtitleNames.push(media.mediaChildren[i].language)
                     subtitles.push(media.mediaChildren[i].filePath)
                 }
+            }
+        }
+        for (let i = 0; i < subtitleNames.length; i++) {
+            if (subtitleNames[i] === "English") {
+                functions.arrayReorder(subtitles, i, 0)
+                functions.arrayReorder(subtitleNames, i, 0)
             }
         }
         if (!subtitles?.[0]) return error ? ipcRenderer.invoke("download-error", "search") : {subtitles, subtitleNames}
@@ -706,20 +806,20 @@ const SearchBar: React.FunctionComponent = (props) => {
                     if (subtitles) downloaded = true
                 } else if (opts.softSubs) {
                     const {subtitles, subtitleNames} = await parseFunimationSubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
-                    const {videoTrack, audioTrack} = await parseFunimationPlaylist(episodes[i], true)
+                    const {videoTrack, audioTracks, audioTrackNames} = await parseFunimationPlaylist(episodes[i], true)
                     if (!videoTrack) continue
                     downloaded = true
-                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTrack, subtitles, subtitleNames, ...opts})
+                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                 } else {
                     let {subtitles, subtitleNames} = await parseFunimationSubtitles({id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
                     if (type === "dub" && language === "jaJP") {
                         subtitles = null
                         subtitleNames = null
                     }
-                    const {videoTrack, audioTrack} = await parseFunimationPlaylist(episodes[i])
+                    const {videoTrack, audioTracks, audioTrackNames} = await parseFunimationPlaylist(episodes[i])
                     if (!videoTrack) continue
                     downloaded = true
-                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTrack, subtitles, subtitleNames, ...opts})
+                    ipcRenderer.invoke("download", {id: current, episode: episodes[i], dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                     }
                 current += 1
                 setID(prev => prev + 1)
@@ -734,10 +834,10 @@ const SearchBar: React.FunctionComponent = (props) => {
                 })
             } else if (opts.softSubs) {
                     const {subtitles, subtitleNames} = await parseFunimationSubtitles({id: 0, episode, dest: directory.replace(/\\+/g, "/"), kind: opts.kind}, false, true, true)
-                    const {videoTrack, audioTrack} = await parseFunimationPlaylist(episode, true)
+                    const {videoTrack, audioTracks, audioTrackNames} = await parseFunimationPlaylist(episode, true)
                     if (!videoTrack) return ipcRenderer.invoke("download-error", "search")
                     setID((prev) => {
-                        ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTrack, subtitles, subtitleNames, ...opts})
+                        ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                         return prev + 1
                     })
             } else {
@@ -746,10 +846,10 @@ const SearchBar: React.FunctionComponent = (props) => {
                     subtitles = null
                     subtitleNames = null
                 }
-                const {videoTrack, audioTrack} = await parseFunimationPlaylist(episode)
+                const {videoTrack, audioTracks, audioTrackNames} = await parseFunimationPlaylist(episode)
                 if (!videoTrack) return ipcRenderer.invoke("download-error", "search")
                 setID((prev) => {
-                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTrack, subtitles, subtitleNames, ...opts})
+                    ipcRenderer.invoke("download", {id: prev, episode, dest: directory.replace(/\\+/g, "/"), playlist: videoTrack, audioTracks, audioTrackNames, subtitles, subtitleNames, ...opts})
                     return prev + 1
                 })
             }
@@ -761,7 +861,7 @@ const SearchBar: React.FunctionComponent = (props) => {
     }
 
     useEffect(() => {
-        if (language === "all") {
+        if (language === "all" || language === "all+audio") {
             if (format !== "mkv") setLanguage("enUS")
         }
         if (website === "crunchyroll") {
@@ -775,11 +875,21 @@ const SearchBar: React.FunctionComponent = (props) => {
             if (format === "srt") setFormat("ass")
             if (quality === "540") setQuality("480")
             if (quality === "432") setQuality("360")
+            if (language === "hiIN") setLanguage("enUS")
+            if (language === "idID") setLanguage("enUS")
+            if (language === "msMY") setLanguage("enUS")
+            if (language === "thTH") setLanguage("enUS")
+            if (language === "viVN") setLanguage("enUS")
         }
         if (website === "funimation") {
             if (format === "png") setFormat("mp4")
             if (quality === "480") setQuality("540")
             if (quality === "360") setQuality("432")
+            if (language === "hiIN") setLanguage("enUS")
+            if (language === "idID") setLanguage("enUS")
+            if (language === "msMY") setLanguage("enUS")
+            if (language === "thTH") setLanguage("enUS")
+            if (language === "viVN") setLanguage("enUS")
         }
         if (checkboxMode) {
             if (quality === "360" || quality === "240") setQuality("480")
@@ -931,6 +1041,7 @@ const SearchBar: React.FunctionComponent = (props) => {
                     <p className="dropdown-label">Language: </p>
                     <DropdownButton title={functions.parseLocale(language)} drop="down">
                         {type === "sub" && format === "mkv" ? <Dropdown.Item active={language === "all"} onClick={() => setLanguage("all")}>All</Dropdown.Item> : null}
+                        {type === "sub" && format === "mkv" ? <Dropdown.Item active={language === "all+audio"} onClick={() => setLanguage("all+audio")}>All+Audio</Dropdown.Item> : null}
                         {type === "dub" ? <Dropdown.Item active={language === "jaJP"} onClick={() => setLanguage("jaJP")}>Japanese</Dropdown.Item> : null}
                         <Dropdown.Item active={language === "enUS"} onClick={() => setLanguage("enUS")}>English</Dropdown.Item>
                         <Dropdown.Item active={language === "esLA"} onClick={() => setLanguage("esLA")}>Spanish</Dropdown.Item>
@@ -940,6 +1051,11 @@ const SearchBar: React.FunctionComponent = (props) => {
                         <Dropdown.Item active={language === "ruRU"} onClick={() => setLanguage("ruRU")}>Russian</Dropdown.Item>
                         <Dropdown.Item active={language === "ptBR"} onClick={() => setLanguage("ptBR")}>Portuguese</Dropdown.Item>
                         <Dropdown.Item active={language === "arME"} onClick={() => setLanguage("arME")}>Arabic</Dropdown.Item>
+                        {website === "crunchyroll" ? <Dropdown.Item active={language === "viVN"} onClick={() => setLanguage("viVN")}>Vietnamese</Dropdown.Item> : null}
+                        {website === "crunchyroll" ? <Dropdown.Item active={language === "idID"} onClick={() => setLanguage("idID")}>Indonesian</Dropdown.Item> : null}
+                        {website === "crunchyroll" ? <Dropdown.Item active={language === "hiIN"} onClick={() => setLanguage("hiIN")}>Hindi</Dropdown.Item> : null}
+                        {website === "crunchyroll" ? <Dropdown.Item active={language === "msMY"} onClick={() => setLanguage("msMY")}>Malay</Dropdown.Item> : null}
+                        {website === "crunchyroll" ? <Dropdown.Item active={language === "thTH"} onClick={() => setLanguage("thTH")}>Thai</Dropdown.Item> : null}
                     </DropdownButton>
                 </div>
                 <div className="dropdown-container">
